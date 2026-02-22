@@ -2,6 +2,18 @@
 BaseChannel — abstract interface for all message channels.
 
 Adding a new channel = one file implementing BaseChannel + one field in ChannelsConfig.
+
+Message delivery uses the Template Method pattern:
+  ``send()`` is a concrete dispatcher — subclasses must NOT override it.
+  Override only the per-type hooks that the channel supports:
+
+  - ``send_tool_progress`` — default: no-op (opt-in)
+  - ``send_tool_result``   — default: no-op (opt-in)
+  - ``send_ai_message``    — abstract (required)
+
+A minimal channel only needs ``send_ai_message``.
+Both ``tool_progress`` and ``tool_result`` carry a ``"tool_call_id"`` key in
+``msg.metadata`` so channels can correlate call and result for combined rendering.
 """
 
 from __future__ import annotations
@@ -36,13 +48,50 @@ class BaseChannel(ABC):
         """
         ...
 
-    @abstractmethod
     async def send(self, msg: OutboundMessage) -> None:
         """
-        Deliver *msg* back to the user on this channel.
+        Dispatch *msg* to the appropriate per-type hook.
 
-        Implementations should handle streaming chunks gracefully
-        (e.g. editing/appending to a previous message on Telegram).
+        Do NOT override this method in subclasses — override the hooks instead.
+        """
+        if msg.type == "tool_progress":
+            await self.send_tool_progress(msg)
+        elif msg.type == "tool_result":
+            await self.send_tool_result(msg)
+        else:
+            await self.send_ai_message(msg)
+
+    async def send_tool_progress(self, msg: OutboundMessage) -> None:
+        """
+        Notify the user that a tool is being called.
+
+        Default: silent no-op. Override to show a status indicator or buffer
+        the call info for later combination with the result.
+
+        ``msg.metadata`` contains:
+          - ``"tool_call_id"`` (str)  — correlates with the matching result
+          - ``"tool"``         (str)  — tool name
+          - ``"args"``         (dict) — arguments passed to the tool
+        """
+
+    async def send_tool_result(self, msg: OutboundMessage) -> None:
+        """
+        Deliver the raw output returned by a tool.
+
+        Default: silent no-op. Override to display the result — e.g. combine
+        it with the buffered call info for a single rendered message.
+
+        ``msg.metadata`` contains:
+          - ``"tool_call_id"`` (str) — correlates with the matching call
+        ``msg.content`` holds the raw tool output text.
+        """
+
+    @abstractmethod
+    async def send_ai_message(self, msg: OutboundMessage) -> None:
+        """
+        Deliver the final AI response to the user.
+
+        Every channel must implement this.
         """
         ...
 

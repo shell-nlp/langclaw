@@ -54,7 +54,9 @@ class OutboundMessage:
     user_id: str
     context_id: str
     content: str
-    streaming: bool = True
+    type: str = "ai"
+    """Message type: ``"ai"`` | ``"tool_progress"`` | ``"tool_result"``."""
+    streaming: bool = False
     metadata: dict = field(default_factory=dict)
 
 

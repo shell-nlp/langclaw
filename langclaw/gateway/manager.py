@@ -103,13 +103,102 @@ class GatewayManager:
                 name=f"handle:{msg.channel}:{msg.user_id}",
             )
 
+    async def _stream_updates_to_outbound_message(
+        self,
+        chunk: dict[str, Any],
+        msg: InboundMessage,
+        channel: BaseChannel,
+    ) -> None:
+        """
+        Translate one ``stream_mode="updates"`` chunk into ``OutboundMessage``
+        calls on *channel*.
+
+        With ``stream_mode="updates"`` each chunk is a dict of
+        ``{node_name: node_state_update}``.  Only node updates that carry a
+        ``"messages"`` list are relevant; all others (middleware side-effects,
+        etc.) are skipped.
+
+        Each LangGraph message maps to exactly one ``OutboundMessage``.
+        Correlation between a tool call and its result is left to the channel
+        via the shared ``"tool_call_id"`` metadata key.
+
+        - ``AIMessage`` with ``tool_calls`` → ``type="tool_progress"`` per call
+        - ``ToolMessage``                   → ``type="tool_result"``
+        - ``AIMessage`` with text content   → ``type="ai"``
+        """
+        from langchain_core.messages import AIMessage, ToolMessage
+
+        for node_name, node_update in chunk.items():
+            if not isinstance(node_update, dict):
+                continue
+            # Only handle model and tools nodes
+            # Skip middleware nodes
+            if node_name not in ["model", "tools"]:
+                continue
+            messages = node_update.get("messages")
+            if not messages:
+                continue
+
+            for m in messages:
+                # ── Tool-progress: LLM decided to call a tool ─────────────
+                if isinstance(m, AIMessage) and m.tool_calls:
+                    for tc in m.tool_calls:
+                        await channel.send(
+                            OutboundMessage(
+                                channel=msg.channel,
+                                user_id=msg.user_id,
+                                context_id=msg.context_id,
+                                content="",
+                                type="tool_progress",
+                                metadata={
+                                    "tool_call_id": tc.get("id", ""),
+                                    "tool": tc.get("name", ""),
+                                    "args": tc.get("args", {}),
+                                },
+                            )
+                        )
+
+                # ── Tool result: raw output from the tool ──────────────────
+                elif isinstance(m, ToolMessage):
+                    content = m.content
+                    if not isinstance(content, str):
+                        content = str(content)
+                    await channel.send(
+                        OutboundMessage(
+                            channel=msg.channel,
+                            user_id=msg.user_id,
+                            context_id=msg.context_id,
+                            content=content,
+                            type="tool_result",
+                            metadata={"tool_call_id": m.tool_call_id or ""},
+                        )
+                    )
+
+                # ── AI text response ───────────────────────────────────────
+                elif isinstance(m, AIMessage) and m.content:
+                    raw = m.content
+                    if not isinstance(raw, str):
+                        raw = " ".join(
+                            b.get("text", "") if isinstance(b, dict) else str(b)
+                            for b in raw
+                        )
+                    if raw:
+                        await channel.send(
+                            OutboundMessage(
+                                channel=msg.channel,
+                                user_id=msg.user_id,
+                                context_id=msg.context_id,
+                                content=raw,
+                                type="ai",
+                            )
+                        )
+
     async def _handle(self, msg: InboundMessage) -> None:
         """
         Full message handling pipeline:
           1. Resolve / create LangGraph thread
           2. Build RunnableConfig with channel context
-          3. Stream agent response, forwarding tool-progress and final reply
-          4. Forward each chunk to the channel
+          3. Stream agent updates, dispatching each to the originating channel
         """
         channel = self._channel_map.get(msg.channel)
         if channel is None:
@@ -134,97 +223,13 @@ class GatewayManager:
         input_state = {"messages": [HumanMessage(content=msg.content)]}
 
         try:
-            from langchain_core.messages import AIMessage
-
-            accumulated = ""
-            # Track which tool-call IDs we've already notified about so we
-            # don't spam the user when the same state is re-emitted.
-            notified_tool_ids: set[str] = set()
-
             async for chunk in self._agent.astream(
                 input_state,
                 config=runnable_config,
-                stream_mode="values",
-                print_mode="values",
+                stream_mode="updates",
+                print_mode="updates",
             ):
-                if "messages" not in chunk:
-                    continue
-
-                messages = chunk["messages"]
-
-                # ── Tool-progress notifications ───────────────────────────
-                # When the LLM has decided to call a tool the AIMessage carries
-                # non-empty tool_calls but often an empty content field.  Emit
-                # a friendly status message so the user knows what is happening.
-                for m in messages:
-                    if not (isinstance(m, AIMessage) and m.tool_calls):
-                        continue
-                    for tc in m.tool_calls:
-                        tc_id = tc.get("id") or tc.get("name", "")
-                        if tc_id and tc_id not in notified_tool_ids:
-                            notified_tool_ids.add(tc_id)
-                            await channel.send(
-                                OutboundMessage(
-                                    channel=msg.channel,
-                                    user_id=msg.user_id,
-                                    context_id=msg.context_id,
-                                    content="",
-                                    streaming=True,
-                                    metadata={
-                                        "type": "tool_progress",
-                                        "tool": tc.get("name", ""),
-                                        "args": tc.get("args", {}),
-                                    },
-                                )
-                            )
-
-                # ── Final-text accumulation ───────────────────────────────
-                # With stream_mode="values" the last message after a tool call
-                # is often a ToolMessage, not an AIMessage.  Search backwards
-                # for the last AIMessage that actually has text content.
-                last_ai = next(
-                    (
-                        m
-                        for m in reversed(messages)
-                        if isinstance(m, AIMessage) and m.content
-                    ),
-                    None,
-                )
-                if last_ai is None:
-                    continue
-
-                raw = last_ai.content
-                # Flatten list-of-content-blocks (some providers return this)
-                if not isinstance(raw, str):
-                    raw = " ".join(
-                        b.get("text", "") if isinstance(b, dict) else str(b)
-                        for b in raw
-                    )
-                if raw and raw != accumulated:
-                    delta = raw[len(accumulated) :]
-                    accumulated = raw
-                    if delta:
-                        await channel.send(
-                            OutboundMessage(
-                                channel=msg.channel,
-                                user_id=msg.user_id,
-                                context_id=msg.context_id,
-                                content=delta,
-                                streaming=True,
-                            )
-                        )
-
-            # Final non-streaming marker so the channel knows the turn is complete
-            if accumulated:
-                await channel.send(
-                    OutboundMessage(
-                        channel=msg.channel,
-                        user_id=msg.user_id,
-                        context_id=msg.context_id,
-                        content=accumulated,
-                        streaming=False,
-                    )
-                )
+                await self._stream_updates_to_outbound_message(chunk, msg, channel)
 
         except Exception:
             logger.exception(f"Error handling message from {msg.channel}/{msg.user_id}")
@@ -235,7 +240,7 @@ class GatewayManager:
                         user_id=msg.user_id,
                         context_id=msg.context_id,
                         content="Sorry, something went wrong. Please try again.",
-                        streaming=False,
+                        type="ai",
                     )
                 )
             except Exception:
