@@ -47,7 +47,7 @@ def build_tool_permission_middleware(
     """
 
     @wrap_model_call
-    def _tool_permission_filter(
+    async def _tool_permission_filter(
         request: ModelRequest,
         handler: Callable[[ModelRequest], ModelResponse],
     ) -> ModelResponse:
@@ -60,19 +60,18 @@ def build_tool_permission_middleware(
 
         role_cfg = config.roles.get(user_role)
         if role_cfg is None or "*" in role_cfg.tools:
-            return handler(request)
+            logger.debug(
+                f"Permissions: role={user_role} allowed all tools for this call",
+            )
+            return await handler(request)
 
         allowed = set(role_cfg.tools)
         filtered = [t for t in request.tools if t.name in allowed]
-        if len(filtered) != len(request.tools):
-            removed = {t.name for t in request.tools} - allowed
-            logger.debug(
-                "Permissions: role={!r} removed tools {}" " for this call",
-                user_role,
-                removed,
-            )
+        logger.debug(
+            f"Permissions: role={user_role} allowed tools {allowed} for this call",
+        )
 
-        return handler(request.override(tools=filtered))
+        return await handler(request.override(tools=filtered))
 
     return _tool_permission_filter
 
