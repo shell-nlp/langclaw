@@ -169,6 +169,9 @@ app.subagent(
         "Return ONLY the final report — no intermediate reasoning."
     ),
     tools=["web_search", "web_fetch"],
+    # Deliver the result directly to the channel instead of
+    # returning it to the main agent
+    output="channel",
 )
 
 
