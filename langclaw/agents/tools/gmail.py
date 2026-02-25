@@ -103,15 +103,18 @@ def make_read_email_tool(config: GmailConfig) -> BaseTool:
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 
-        msg = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .get(userId="me", id=message_id, format="full")
-                .execute()
-            ),
-        )
+        try:
+            msg = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .get(userId="me", id=message_id, format="full")
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to read email {message_id!r}: {exc}"}
 
         headers = msg.get("payload", {}).get("headers", [])
         payload = msg.get("payload", {})
@@ -151,15 +154,18 @@ def make_search_emails_tool(config: GmailConfig) -> BaseTool:
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 
-        response = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .list(userId="me", q=query, maxResults=max_results)
-                .execute()
-            ),
-        )
+        try:
+            response = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .list(userId="me", q=query, maxResults=max_results)
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return [{"error": f"Failed to search emails: {exc}"}]
 
         messages = response.get("messages", [])
         if not messages:
@@ -167,16 +173,19 @@ def make_search_emails_tool(config: GmailConfig) -> BaseTool:
 
         results: list[dict] = []
         for msg_stub in messages:
-            msg = await loop.run_in_executor(
-                None,
-                lambda mid=msg_stub["id"]: (
-                    service.users()
-                    .messages()
-                    .get(userId="me", id=mid, format="metadata",
-                         metadataHeaders=["Subject", "From", "Date"])
-                    .execute()
-                ),
-            )
+            try:
+                msg = await loop.run_in_executor(
+                    None,
+                    lambda mid=msg_stub["id"]: (
+                        service.users()
+                        .messages()
+                        .get(userId="me", id=mid, format="metadata",
+                             metadataHeaders=["Subject", "From", "Date"])
+                        .execute()
+                    ),
+                )
+            except Exception:
+                continue
             headers = msg.get("payload", {}).get("headers", [])
             results.append(
                 {
@@ -230,15 +239,18 @@ def make_send_email_tool(config: GmailConfig) -> BaseTool:
 
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
-        sent = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .send(userId="me", body={"raw": raw})
-                .execute()
-            ),
-        )
+        try:
+            sent = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .send(userId="me", body={"raw": raw})
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to send email: {exc}"}
 
         return {
             "status": "sent",
@@ -284,15 +296,18 @@ def make_draft_email_tool(config: GmailConfig) -> BaseTool:
 
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
-        draft = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .drafts()
-                .create(userId="me", body={"message": {"raw": raw}})
-                .execute()
-            ),
-        )
+        try:
+            draft = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .drafts()
+                    .create(userId="me", body={"message": {"raw": raw}})
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to create draft: {exc}"}
 
         return {
             "status": "drafted",
@@ -318,16 +333,19 @@ def make_reply_email_tool(config: GmailConfig) -> BaseTool:
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 
-        original = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .get(userId="me", id=message_id, format="metadata",
-                     metadataHeaders=["Subject", "From", "To", "Message-ID"])
-                .execute()
-            ),
-        )
+        try:
+            original = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .get(userId="me", id=message_id, format="metadata",
+                         metadataHeaders=["Subject", "From", "To", "Message-ID"])
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to fetch original message {message_id!r}: {exc}"}
 
         orig_headers = original.get("payload", {}).get("headers", [])
         orig_subject = _extract_header(orig_headers, "Subject")
@@ -346,15 +364,18 @@ def make_reply_email_tool(config: GmailConfig) -> BaseTool:
 
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
-        sent = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .send(userId="me", body={"raw": raw, "threadId": thread_id})
-                .execute()
-            ),
-        )
+        try:
+            sent = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .send(userId="me", body={"raw": raw, "threadId": thread_id})
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to send reply: {exc}"}
 
         return {
             "status": "replied",
@@ -403,22 +424,25 @@ def make_manage_labels_tool(config: GmailConfig) -> BaseTool:
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 
-        modified = await loop.run_in_executor(
-            None,
-            lambda: (
-                service.users()
-                .messages()
-                .modify(
-                    userId="me",
-                    id=message_id,
-                    body={
-                        "addLabelIds": add_labels,
-                        "removeLabelIds": remove_labels,
-                    },
-                )
-                .execute()
-            ),
-        )
+        try:
+            modified = await loop.run_in_executor(
+                None,
+                lambda: (
+                    service.users()
+                    .messages()
+                    .modify(
+                        userId="me",
+                        id=message_id,
+                        body={
+                            "addLabelIds": add_labels,
+                            "removeLabelIds": remove_labels,
+                        },
+                    )
+                    .execute()
+                ),
+            )
+        except Exception as exc:
+            return {"error": f"Failed to modify labels on {message_id!r}: {exc}"}
 
         return {
             "status": "modified",
