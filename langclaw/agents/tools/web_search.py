@@ -43,8 +43,7 @@ def _make_brave_tool(api_key: str) -> BaseTool:
             from langchain_community.document_loaders import BraveSearchLoader
         except ImportError as exc:
             raise ImportError(
-                "langchain-community is required. Install with: "
-                "uv add langchain-community"
+                "langchain-community is required. Install with: uv add langchain-community"
             ) from exc
 
         logger.debug('Brave search: "{}" (n={})', query, n)
@@ -187,22 +186,15 @@ def make_web_search_tool(
     """
     if backend == "brave":
         if not api_key:
-            raise ValueError(
-                "brave search backend requires tools.brave_api_key to be set."
-            )
+            raise ValueError("brave search backend requires tools.brave_api_key to be set.")
         return _make_brave_tool(api_key)
 
     if backend == "tavily":
         if not api_key:
-            raise ValueError(
-                "tavily search backend requires tools.tavily_api_key to be set."
-            )
+            raise ValueError("tavily search backend requires tools.tavily_api_key to be set.")
         return _make_tavily_tool(api_key)
 
     if backend == "duckduckgo":
         return _make_duckduckgo_tool()
 
-    raise ValueError(
-        f"Unknown search backend: {backend!r}. "
-        f"Choose one of: {', '.join(_BACKENDS)}."
-    )
+    raise ValueError(f"Unknown search backend: {backend!r}. Choose one of: {', '.join(_BACKENDS)}.")

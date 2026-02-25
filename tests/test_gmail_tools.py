@@ -203,9 +203,7 @@ class TestReadEmailTool:
 
         cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec")
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_read_email_tool
 
             t = make_read_email_tool(cfg)
@@ -225,9 +223,7 @@ class TestSearchEmailsTool:
 
         cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec")
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_search_emails_tool
 
             t = make_search_emails_tool(cfg)
@@ -244,19 +240,13 @@ class TestSendEmailTool:
     async def test_send_email_returns_sent_status(self):
         from langclaw.config.schema import GmailConfig
 
-        cfg = GmailConfig(
-            enabled=True, client_id="cid", client_secret="csec", readonly=False
-        )
+        cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec", readonly=False)
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_send_email_tool
 
             t = make_send_email_tool(cfg)
-            result = await t.ainvoke(
-                {"to": "bob@example.com", "subject": "Hi", "body": "Hello"}
-            )
+            result = await t.ainvoke({"to": "bob@example.com", "subject": "Hi", "body": "Hello"})
 
         assert result["status"] == "sent"
         assert result["id"] == "sent789"
@@ -267,19 +257,13 @@ class TestDraftEmailTool:
     async def test_draft_email_returns_draft_id(self):
         from langclaw.config.schema import GmailConfig
 
-        cfg = GmailConfig(
-            enabled=True, client_id="cid", client_secret="csec", readonly=False
-        )
+        cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec", readonly=False)
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_draft_email_tool
 
             t = make_draft_email_tool(cfg)
-            result = await t.ainvoke(
-                {"to": "bob@example.com", "subject": "Draft", "body": "WIP"}
-            )
+            result = await t.ainvoke({"to": "bob@example.com", "subject": "Draft", "body": "WIP"})
 
         assert result["status"] == "drafted"
         assert result["draft_id"] == "draft001"
@@ -290,13 +274,9 @@ class TestReplyEmailTool:
     async def test_reply_email_returns_replied_status(self):
         from langclaw.config.schema import GmailConfig
 
-        cfg = GmailConfig(
-            enabled=True, client_id="cid", client_secret="csec", readonly=False
-        )
+        cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec", readonly=False)
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_reply_email_tool
 
             t = make_reply_email_tool(cfg)
@@ -310,19 +290,13 @@ class TestManageLabelsTool:
     async def test_manage_labels_modifies_labels(self):
         from langclaw.config.schema import GmailConfig
 
-        cfg = GmailConfig(
-            enabled=True, client_id="cid", client_secret="csec", readonly=False
-        )
+        cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec", readonly=False)
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_manage_labels_tool
 
             t = make_manage_labels_tool(cfg)
-            result = await t.ainvoke(
-                {"message_id": "msg123", "remove_labels": ["UNREAD"]}
-            )
+            result = await t.ainvoke({"message_id": "msg123", "remove_labels": ["UNREAD"]})
 
         assert result["status"] == "modified"
         assert result["id"] == "msg123"
@@ -330,13 +304,9 @@ class TestManageLabelsTool:
     async def test_manage_labels_no_ops_returns_error(self):
         from langclaw.config.schema import GmailConfig
 
-        cfg = GmailConfig(
-            enabled=True, client_id="cid", client_secret="csec", readonly=False
-        )
+        cfg = GmailConfig(enabled=True, client_id="cid", client_secret="csec", readonly=False)
 
-        with patch(
-            "langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()
-        ):
+        with patch("langclaw.agents.tools.gmail._get_gmail_service", return_value=_mock_service()):
             from langclaw.agents.tools.gmail import make_manage_labels_tool
 
             t = make_manage_labels_tool(cfg)

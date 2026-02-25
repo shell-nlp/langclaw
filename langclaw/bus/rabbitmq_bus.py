@@ -66,9 +66,7 @@ class RabbitMQMessageBus(BaseMessageBus):
         self._connection = await aio_pika.connect_robust(self._amqp_url)
         self._channel = await self._connection.channel()
         await self._channel.set_qos(prefetch_count=self._prefetch_count)
-        self._queue = await self._channel.declare_queue(
-            self._queue_name, durable=True
-        )
+        self._queue = await self._channel.declare_queue(self._queue_name, durable=True)
 
     async def stop(self) -> None:
         if self._connection and not self._connection.is_closed:

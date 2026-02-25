@@ -29,9 +29,7 @@ def make_message_bus(
             topic=kafka_topic,
             group_id=kafka_group_id,
         )
-    raise ValueError(
-        f"Unknown bus backend: {backend!r}. Choose 'asyncio', 'rabbitmq', or 'kafka'."
-    )
+    raise ValueError(f"Unknown bus backend: {backend!r}. Choose 'asyncio', 'rabbitmq', or 'kafka'.")
 
 
 __all__ = [

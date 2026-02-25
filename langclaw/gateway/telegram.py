@@ -183,9 +183,7 @@ class TelegramChannel(BaseChannel):
 
         app.add_error_handler(self._on_error)
         app.add_handler(MessageHandler(filters.COMMAND, self._handle_command))
-        app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
-        )
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message))
 
         logger.info("TelegramChannel starting (polling mode)…")
         await app.initialize()
@@ -199,9 +197,7 @@ class TelegramChannel(BaseChannel):
 
             bot_commands = [
                 BotCommand(entry.name, entry.description or entry.name)
-                for entry in (
-                    self._command_router.list_commands() if self._command_router else []
-                )
+                for entry in (self._command_router.list_commands() if self._command_router else [])
             ]
             if bot_commands:
                 await app.bot.set_my_commands(bot_commands)
@@ -268,17 +264,10 @@ class TelegramChannel(BaseChannel):
             call_info.get("args") or {},
             markup="html",
         )
-        escaped = (
-            msg.content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        )
+        escaped = msg.content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         # Leave room for header + blockquote tags + newline + safety margin.
         _BLOCKQUOTE_OVERHEAD = len("<blockquote expandable></blockquote>") + 1
-        max_content = (
-            _MAX_MESSAGE_LEN
-            - len(header)
-            - _BLOCKQUOTE_OVERHEAD
-            - len(TRUNCATION_SUFFIX)
-        )
+        max_content = _MAX_MESSAGE_LEN - len(header) - _BLOCKQUOTE_OVERHEAD - len(TRUNCATION_SUFFIX)
         if len(escaped) > max_content:
             escaped = escaped[:max_content] + TRUNCATION_SUFFIX
         html = f"{header}\n<blockquote expandable>{escaped}</blockquote>"
@@ -313,10 +302,7 @@ class TelegramChannel(BaseChannel):
         bot: Bot = self._app.bot  # type: ignore[attr-defined]
 
         html = _markdown_to_telegram_html(text)
-        logger.debug(
-            f"_send_chunk to {chat_id}: "
-            f"raw={len(text)} chars, html={len(html)} chars"
-        )
+        logger.debug(f"_send_chunk to {chat_id}: raw={len(text)} chars, html={len(html)} chars")
         try:
             await bot.send_message(chat_id=chat_id, text=html, parse_mode="HTML")
         except BadRequest as exc:
@@ -400,9 +386,7 @@ class TelegramChannel(BaseChannel):
 
         user_id = str(user.id)
         if not self._is_allowed(user_id, user.username):
-            await update.message.reply_text(
-                "Sorry, you are not authorised to use this bot."
-            )
+            await update.message.reply_text("Sorry, you are not authorised to use this bot.")
             return
 
         chat_id = str(update.message.chat_id)

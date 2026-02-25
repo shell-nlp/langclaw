@@ -65,8 +65,7 @@ def _make_data_store(cfg: CronDataStoreConfig) -> DataStore:
     if cfg.backend == "postgres":
         if not cfg.postgres.dsn:
             raise ValueError(
-                "cron.data_store.postgres.dsn must be set when "
-                "data_store.backend = 'postgres'."
+                "cron.data_store.postgres.dsn must be set when data_store.backend = 'postgres'."
             )
         try:
             from apscheduler.datastores.sqlalchemy import SQLAlchemyDataStore
@@ -94,14 +93,13 @@ def _make_event_broker(cfg: CronEventBrokerConfig) -> EventBroker:
     if cfg.backend == "asyncpg":
         if not cfg.asyncpg.dsn:
             raise ValueError(
-                "cron.event_broker.asyncpg.dsn must be set when "
-                "event_broker.backend = 'asyncpg'."
+                "cron.event_broker.asyncpg.dsn must be set when event_broker.backend = 'asyncpg'."
             )
         try:
             from apscheduler.eventbrokers.asyncpg import AsyncpgEventBroker
         except ImportError as exc:
             raise ImportError(
-                "asyncpg event broker requires asyncpg. " "Install with: uv add asyncpg"
+                "asyncpg event broker requires asyncpg. Install with: uv add asyncpg"
             ) from exc
 
         return AsyncpgEventBroker.from_dsn(cfg.asyncpg.dsn)
@@ -109,15 +107,13 @@ def _make_event_broker(cfg: CronEventBrokerConfig) -> EventBroker:
     if cfg.backend == "psycopg":
         if not cfg.psycopg.dsn:
             raise ValueError(
-                "cron.event_broker.psycopg.dsn must be set when "
-                "event_broker.backend = 'psycopg'."
+                "cron.event_broker.psycopg.dsn must be set when event_broker.backend = 'psycopg'."
             )
         try:
             from apscheduler.eventbrokers.psycopg import PsycopgEventBroker
         except ImportError as exc:
             raise ImportError(
-                "psycopg event broker requires psycopg. "
-                "Install with: uv add 'psycopg[binary]'"
+                "psycopg event broker requires psycopg. Install with: uv add 'psycopg[binary]'"
             ) from exc
 
         return PsycopgEventBroker.from_dsn(cfg.psycopg.dsn)
@@ -127,7 +123,7 @@ def _make_event_broker(cfg: CronEventBrokerConfig) -> EventBroker:
             from apscheduler.eventbrokers.redis import RedisEventBroker
         except ImportError as exc:
             raise ImportError(
-                "Redis event broker requires redis. " "Install with: uv add redis"
+                "Redis event broker requires redis. Install with: uv add redis"
             ) from exc
 
         return RedisEventBroker(host=cfg.redis.host, port=cfg.redis.port)
@@ -173,8 +169,7 @@ async def list_jobs_from_store(config: CronConfig) -> list[CronJob]:
         from apscheduler import AsyncScheduler
     except ImportError as exc:
         raise ImportError(
-            "list_jobs_from_store requires apscheduler>=4. "
-            "Install with: uv add 'apscheduler>=4'"
+            "list_jobs_from_store requires apscheduler>=4. Install with: uv add 'apscheduler>=4'"
         ) from exc
 
     data_store = _make_data_store(config.data_store)

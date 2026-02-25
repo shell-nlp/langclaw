@@ -55,7 +55,7 @@ async def _crawl_one(url: str) -> dict[str, Any]:
         from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
     except ImportError as exc:
         raise ImportError(
-            "crawl4ai is required for web fetching. " "Install with: uv add crawl4ai"
+            "crawl4ai is required for web fetching. Install with: uv add crawl4ai"
         ) from exc
 
     prune_filter = PruningContentFilter(
@@ -159,10 +159,12 @@ async def web_fetch(urls: list[str]) -> list[dict]:
     for u in urls:
         if _is_internal_url(u):
             logger.warning("Blocked internal/private URL: {}", u)
-            blocked.append({
-                "url": u,
-                "error": "Blocked: internal or private network addresses are not allowed.",
-            })
+            blocked.append(
+                {
+                    "url": u,
+                    "error": "Blocked: internal or private network addresses are not allowed.",
+                }
+            )
         else:
             safe_urls.append(u)
 

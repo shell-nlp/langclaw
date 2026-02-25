@@ -126,9 +126,7 @@ def test_checkpointer_factory_postgres():
         make_checkpointer_backend,
     )
 
-    backend = make_checkpointer_backend(
-        "postgres", dsn="postgresql://user:pass@localhost/db"
-    )
+    backend = make_checkpointer_backend("postgres", dsn="postgresql://user:pass@localhost/db")
     assert isinstance(backend, PostgresCheckpointerBackend)
 
 
@@ -247,9 +245,7 @@ async def test_asyncio_bus_publish_subscribe():
 
     bus = AsyncioMessageBus()
     async with bus:
-        msg = InboundMessage(
-            channel="test", user_id="u1", context_id="c1", content="hello"
-        )
+        msg = InboundMessage(channel="test", user_id="u1", context_id="c1", content="hello")
         await bus.publish(msg)
 
         received = None

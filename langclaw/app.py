@@ -57,9 +57,7 @@ class Langclaw:
         self._extra_channels: list[BaseChannel] = []
         self._extra_middleware: list[Any] = []
         self._extra_roles: dict[str, list[str]] = {}
-        self._extra_commands: list[
-            tuple[str, Callable[[CommandContext], Awaitable[str]], str]
-        ] = []
+        self._extra_commands: list[tuple[str, Callable[[CommandContext], Awaitable[str]], str]] = []
         self._startup_hooks: list[Callable] = []
         self._shutdown_hooks: list[Callable] = []
 
@@ -77,9 +75,7 @@ class Langclaw:
     # Tool registration
     # ------------------------------------------------------------------
 
-    def tool(
-        self, *, roles: list[str] | None = None
-    ) -> Callable:
+    def tool(self, *, roles: list[str] | None = None) -> Callable:
         """Decorator to register a function as a LangChain tool.
 
         If the decorated function is not already a ``BaseTool``, it is
@@ -314,8 +310,7 @@ class Langclaw:
 
                 cron_status = "enabled" if cron_manager else "disabled"
                 logger.info(
-                    "Gateway starting — channels: {}, bus: {}, "
-                    "checkpointer: {}, cron: {}",
+                    "Gateway starting — channels: {}, bus: {}, checkpointer: {}, cron: {}",
                     [ch.name for ch in channels],
                     bus_cfg.backend,
                     cp_cfg.backend,
@@ -382,8 +377,7 @@ class Langclaw:
                 channels.append(DiscordChannel(ch_cfg.discord))
             except ImportError:
                 logger.warning(
-                    "Discord enabled but discord.py not installed. "
-                    "Run: uv add 'langclaw[discord]'"
+                    "Discord enabled but discord.py not installed. Run: uv add 'langclaw[discord]'"
                 )
 
         if ch_cfg.websocket.enabled:

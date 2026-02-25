@@ -47,7 +47,5 @@ class BaseCheckpointerBackend(ABC):
     def get(self) -> BaseCheckpointSaver:
         """Return the active saver (must be called inside the context manager)."""
         if self._saver is None:
-            raise RuntimeError(
-                "Checkpointer not initialised — use 'async with backend:' first."
-            )
+            raise RuntimeError("Checkpointer not initialised — use 'async with backend:' first.")
         return self._saver

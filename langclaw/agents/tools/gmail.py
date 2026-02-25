@@ -179,8 +179,12 @@ def make_search_emails_tool(config: GmailConfig) -> BaseTool:
                     lambda mid=msg_stub["id"]: (
                         service.users()
                         .messages()
-                        .get(userId="me", id=mid, format="metadata",
-                             metadataHeaders=["Subject", "From", "Date"])
+                        .get(
+                            userId="me",
+                            id=mid,
+                            format="metadata",
+                            metadataHeaders=["Subject", "From", "Date"],
+                        )
                         .execute()
                     ),
                 )
@@ -242,12 +246,7 @@ def make_send_email_tool(config: GmailConfig) -> BaseTool:
         try:
             sent = await loop.run_in_executor(
                 None,
-                lambda: (
-                    service.users()
-                    .messages()
-                    .send(userId="me", body={"raw": raw})
-                    .execute()
-                ),
+                lambda: (service.users().messages().send(userId="me", body={"raw": raw}).execute()),
             )
         except Exception as exc:
             return {"error": f"Failed to send email: {exc}"}
@@ -339,8 +338,12 @@ def make_reply_email_tool(config: GmailConfig) -> BaseTool:
                 lambda: (
                     service.users()
                     .messages()
-                    .get(userId="me", id=message_id, format="metadata",
-                         metadataHeaders=["Subject", "From", "To", "Message-ID"])
+                    .get(
+                        userId="me",
+                        id=message_id,
+                        format="metadata",
+                        metadataHeaders=["Subject", "From", "To", "Message-ID"],
+                    )
                     .execute()
                 ),
             )

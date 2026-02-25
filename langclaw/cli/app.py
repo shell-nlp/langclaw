@@ -103,9 +103,7 @@ def init(
 def agent(
     message: Annotated[
         str | None,
-        typer.Option(
-            "--message", "-m", help="Single message to send (non-interactive)."
-        ),
+        typer.Option("--message", "-m", help="Single message to send (non-interactive)."),
     ] = None,
     model: Annotated[
         str | None,
@@ -231,20 +229,14 @@ def gateway() -> None:
 @cron_app.command("add")
 def cron_add(
     name: Annotated[str, typer.Option("--name", "-n", help="Job name.")],
-    message: Annotated[
-        str, typer.Option("--message", "-m", help="Message to send on trigger.")
-    ],
+    message: Annotated[str, typer.Option("--message", "-m", help="Message to send on trigger.")],
     channel: Annotated[str, typer.Option("--channel", "-c", help="Target channel.")],
     user_id: Annotated[str, typer.Option("--user-id", "-u", help="Target user ID.")],
-    context_id: Annotated[
-        str, typer.Option("--context-id", help="Context/chat ID.")
-    ] = "default",
+    context_id: Annotated[str, typer.Option("--context-id", help="Context/chat ID.")] = "default",
     cron: Annotated[
         str | None, typer.Option("--cron", help='Cron expression, e.g. "0 9 * * *".')
     ] = None,
-    every: Annotated[
-        int | None, typer.Option("--every", help="Interval in seconds.")
-    ] = None,
+    every: Annotated[int | None, typer.Option("--every", help="Interval in seconds.")] = None,
 ) -> None:
     """Schedule a new cron job (persisted to the configured data store)."""
     if cron is None and every is None:
@@ -330,8 +322,7 @@ async def _cron_list_async() -> None:
     typer.echo("-" * 100)
     for job in jobs:
         typer.echo(
-            f"{job.id:<36}  {job.name[:24]:<24}  {job.schedule:<20}  "
-            f"{job.channel}/{job.user_id}"
+            f"{job.id:<36}  {job.name[:24]:<24}  {job.schedule:<20}  {job.channel}/{job.user_id}"
         )
 
 

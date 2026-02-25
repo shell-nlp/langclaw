@@ -102,9 +102,7 @@ class HeartbeatManager:
         self._running = False
         self._task: asyncio.Task | None = None
 
-    def add_condition(
-        self, condition: HeartbeatCondition, target: HeartbeatTarget
-    ) -> None:
+    def add_condition(self, condition: HeartbeatCondition, target: HeartbeatTarget) -> None:
         """Register a new condition + routing target at runtime."""
         self._conditions.append((condition, target))
 
@@ -151,15 +149,11 @@ class HeartbeatManager:
             try:
                 result = await condition.check()
             except Exception:
-                logger.exception(
-                    f"HeartbeatCondition '{condition.name}' raised an exception."
-                )
+                logger.exception(f"HeartbeatCondition '{condition.name}' raised an exception.")
                 continue
 
             if result:
-                logger.debug(
-                    f"HeartbeatCondition '{condition.name}' fired: {result[:80]}"
-                )
+                logger.debug(f"HeartbeatCondition '{condition.name}' fired: {result[:80]}")
                 await self._bus.publish(
                     InboundMessage(
                         channel=target.channel,

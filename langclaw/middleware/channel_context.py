@@ -26,10 +26,12 @@ class ChannelContextMiddleware(AgentMiddleware):
         if ctx is None:
             return None
 
-        return {"channel_context": {
-            "channel": ctx.channel,
-            "user_id": ctx.user_id,
-            "context_id": ctx.context_id,
-            "chat_id": ctx.chat_id,
-            "metadata": ctx.metadata,
-        }}
+        return {
+            "channel_context": {
+                "channel": ctx.channel,
+                "user_id": ctx.user_id,
+                "context_id": ctx.context_id,
+                "chat_id": ctx.chat_id,
+                "metadata": ctx.metadata,
+            }
+        }

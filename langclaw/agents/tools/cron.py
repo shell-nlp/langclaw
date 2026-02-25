@@ -157,9 +157,7 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
 
             name = f"{message[:40].strip()}..."
             # Tasks get their own isolated thread; reminders share the current one.
-            effective_context_id = (
-                context_id if type == "reminder" else make_cron_context_id()
-            )
+            effective_context_id = context_id if type == "reminder" else make_cron_context_id()
             try:
                 job_id_new = await cron_manager.add_job(
                     name=name,
@@ -178,15 +176,9 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
                 return f"Error scheduling job: {exc}"
 
             schedule_desc = (
-                f"every {every_seconds}s"
-                if every_seconds is not None
-                else f'cron "{cron_expr}"'
+                f"every {every_seconds}s" if every_seconds is not None else f'cron "{cron_expr}"'
             )
-            return (
-                f"Job scheduled ({schedule_desc}).\n"
-                f"Job ID: {job_id_new}\n"
-                f"Message: {message}"
-            )
+            return f"Job scheduled ({schedule_desc}).\nJob ID: {job_id_new}\nMessage: {message}"
 
         # ── list ───────────────────────────────────────────────────────────
         if action == "list":

@@ -141,9 +141,7 @@ class UsageTrackerMiddleware(AgentMiddleware):
 
         return response
 
-    def before_agent(
-        self, state: AgentState, runtime: Runtime
-    ) -> dict[str, Any] | None:
+    def before_agent(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
         """Log each agent invocation with a timestamp."""
         ctx = getattr(runtime, "context", None)
         user = ctx.user_id if ctx else "?"

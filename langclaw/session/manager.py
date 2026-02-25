@@ -94,9 +94,7 @@ class SessionManager:
         Convenience: get or create thread then return a ready RunnableConfig.
         """
         thread_id = await self.get_or_create_thread(channel, user_id, context_id)
-        logger.info(
-            f"Current thread_id: {thread_id} for {channel}:{user_id}:{context_id}"
-        )
+        logger.info(f"Current thread_id: {thread_id} for {channel}:{user_id}:{context_id}")
         return self.make_runnable_config(thread_id, channel_context)
 
     def all_threads(self) -> dict[str, str]:

@@ -61,8 +61,7 @@ class KafkaMessageBus(BaseMessageBus):
             import aiokafka
         except ImportError as exc:
             raise ImportError(
-                "KafkaMessageBus requires 'langclaw[kafka]'. "
-                "Install with: uv add 'langclaw[kafka]'"
+                "KafkaMessageBus requires 'langclaw[kafka]'. Install with: uv add 'langclaw[kafka]'"
             ) from exc
 
         self._producer = aiokafka.AIOKafkaProducer(

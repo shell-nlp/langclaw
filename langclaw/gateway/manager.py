@@ -60,9 +60,7 @@ class GatewayManager:
         agent: CompiledStateGraph,
         channels: list[BaseChannel],
         cron_manager: CronManager | None = None,
-        extra_commands: list[
-            tuple[str, Callable[[CommandContext], Awaitable[str]], str]
-        ]
+        extra_commands: list[tuple[str, Callable[[CommandContext], Awaitable[str]], str]]
         | None = None,
     ) -> None:
         self._config = config
@@ -79,9 +77,7 @@ class GatewayManager:
         if extra_commands:
             for cmd_name, handler, description in extra_commands:
                 self._command_router.register(cmd_name, handler, description)
-        self._channel_map: dict[str, BaseChannel] = {
-            ch.name: ch for ch in self._channels
-        }
+        self._channel_map: dict[str, BaseChannel] = {ch.name: ch for ch in self._channels}
 
     async def run(self) -> None:
         """
@@ -221,8 +217,7 @@ class GatewayManager:
                     raw = m.content
                     if not isinstance(raw, str):
                         raw = " ".join(
-                            b.get("text", "") if isinstance(b, dict) else str(b)
-                            for b in raw
+                            b.get("text", "") if isinstance(b, dict) else str(b) for b in raw
                         )
                     if raw:
                         await channel.send(
@@ -264,10 +259,7 @@ class GatewayManager:
         role = user_roles.get(msg.user_id)
         if role is None:
             username = (msg.metadata or {}).get("username", "")
-            logger.debug(
-                f"No role found for user_id {msg.user_id}, "
-                f"checking username {username}"
-            )
+            logger.debug(f"No role found for user_id {msg.user_id}, checking username {username}")
             if username:
                 role = user_roles.get(username)
         return role if role is not None else perms.default_role
@@ -283,7 +275,7 @@ class GatewayManager:
         channel = self._channel_map.get(msg.channel)
         if channel is None:
             logger.warning(
-                f"No channel handler for '{msg.channel}'" " — dropping message.",
+                f"No channel handler for '{msg.channel}' — dropping message.",
             )
             return
 
@@ -335,7 +327,7 @@ class GatewayManager:
 
         except Exception:
             logger.exception(
-                f"Error handling message from" f" {msg.channel}/{msg.user_id}",
+                f"Error handling message from {msg.channel}/{msg.user_id}",
             )
             try:
                 await channel.send(
@@ -344,7 +336,7 @@ class GatewayManager:
                         user_id=msg.user_id,
                         context_id=msg.context_id,
                         chat_id=msg.chat_id,
-                        content=("Sorry, something went wrong." " Please try again."),
+                        content=("Sorry, something went wrong. Please try again."),
                         type="ai",
                     )
                 )

@@ -93,8 +93,7 @@ async def _fire_job(
         )
     if manager is None:
         logger.error(
-            f"CronManager '{manager_id}' not found in registry "
-            f"— dropping fired job '{job_name}'."
+            f"CronManager '{manager_id}' not found in registry — dropping fired job '{job_name}'."
         )
         return
     logger.debug(f"Cron job '{job_name}' fired → publishing to bus.")
@@ -185,9 +184,7 @@ def _schedule_to_cronjob(schedule: Schedule) -> CronJob | None:
             schedule=kwargs.get("schedule") or _trigger_to_str(schedule.trigger),
         )
     except Exception:
-        logger.debug(
-            "Could not reconstruct CronJob from schedule %s", schedule.id, exc_info=True
-        )
+        logger.debug("Could not reconstruct CronJob from schedule %s", schedule.id, exc_info=True)
         return None
 
 
@@ -241,8 +238,7 @@ class CronManager:
             from apscheduler.eventbrokers.local import LocalEventBroker
         except ImportError as exc:
             raise ImportError(
-                "CronManager requires apscheduler>=4. "
-                "Install with: uv add 'apscheduler>=4'"
+                "CronManager requires apscheduler>=4. Install with: uv add 'apscheduler>=4'"
             ) from exc
 
         self._scheduler = AsyncScheduler(
@@ -252,10 +248,7 @@ class CronManager:
         await self._scheduler.__aenter__()
         await self._scheduler.start_in_background()
         _MANAGERS[self._manager_id] = self
-        logger.info(
-            f"CronManager started "
-            f"(id={self._manager_id}, timezone={self._timezone})."
-        )
+        logger.info(f"CronManager started (id={self._manager_id}, timezone={self._timezone}).")
 
     async def stop(self) -> None:
         """Stop the scheduler and deregister from the registry."""
@@ -338,10 +331,7 @@ class CronManager:
                 "schedule": job.schedule,
             },
         )
-        logger.info(
-            f"Cron job '{name}' scheduled "
-            f"(id={job_id}, schedule={job.schedule})."
-        )
+        logger.info(f"Cron job '{name}' scheduled (id={job_id}, schedule={job.schedule}).")
         return job_id
 
     async def remove_job(
@@ -404,11 +394,7 @@ class CronManager:
         except Exception:
             logger.warning("Failed to query cron data store for list_jobs.")
             return []
-        all_jobs = [
-            job
-            for s in schedules
-            if (job := _schedule_to_cronjob(s)) is not None
-        ]
+        all_jobs = [job for s in schedules if (job := _schedule_to_cronjob(s)) is not None]
         if channel is not None:
             all_jobs = [j for j in all_jobs if j.channel == channel]
         if user_id is not None:

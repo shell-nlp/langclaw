@@ -87,13 +87,9 @@ def create_claw_agent(
         from deepagents import create_deep_agent
         from deepagents.backends import FilesystemBackend
     except ImportError as exc:
-        raise ImportError(
-            "deepagents is required. Install with: uv add deepagents"
-        ) from exc
+        raise ImportError("deepagents is required. Install with: uv add deepagents") from exc
 
-    resolved_model = model or provider_registry.resolve_model(
-        config.agents.model, config.providers
-    )
+    resolved_model = model or provider_registry.resolve_model(config.agents.model, config.providers)
 
     skills = [config.agents.skills_source] + [
         to_virtual_path(s, config.agents.workspace_dir) for s in (extra_skills or [])

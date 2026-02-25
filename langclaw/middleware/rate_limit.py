@@ -36,9 +36,7 @@ class RateLimitMiddleware(AgentMiddleware):
         super().__init__()
         self._rpm = rpm
         self._burst = burst if burst is not None else rpm
-        self._buckets: dict[str, _Bucket] = defaultdict(
-            lambda: _Bucket(tokens=float(self._burst))
-        )
+        self._buckets: dict[str, _Bucket] = defaultdict(lambda: _Bucket(tokens=float(self._burst)))
 
     @hook_config(can_jump_to=["end"])
     def before_agent(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
@@ -65,9 +63,11 @@ class RateLimitMiddleware(AgentMiddleware):
         return {
             "messages": [
                 AIMessage(
-                    content="You are sending messages too fast. Please wait a moment before trying again."
+                    content=(
+                        "You are sending messages too fast. "
+                        "Please wait a moment before trying again."
+                    )
                 )
             ],
             "jump_to": "end",
         }
-

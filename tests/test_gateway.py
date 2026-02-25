@@ -7,8 +7,6 @@ and channel smoke tests (import, instantiation, is_enabled).
 
 from __future__ import annotations
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # gateway.utils — split_message
 # ---------------------------------------------------------------------------
@@ -244,9 +242,7 @@ def test_discord_channel_allow_from_config():
     from langclaw.config.schema import DiscordChannelConfig
     from langclaw.gateway.discord import DiscordChannel
 
-    config = DiscordChannelConfig(
-        enabled=True, token="fake", allow_from=["user1", "user2"]
-    )
+    config = DiscordChannelConfig(enabled=True, token="fake", allow_from=["user1", "user2"])
     ch = DiscordChannel(config)
     assert ch._is_allowed("user1", None) is True
     assert ch._is_allowed("unknown", "user2") is True
@@ -299,9 +295,7 @@ def test_telegram_channel_allow_from():
     from langclaw.config.schema import TelegramChannelConfig
     from langclaw.gateway.telegram import TelegramChannel
 
-    config = TelegramChannelConfig(
-        enabled=True, token="fake", allow_from=["alice"]
-    )
+    config = TelegramChannelConfig(enabled=True, token="fake", allow_from=["alice"])
     ch = TelegramChannel(config)
     assert ch._is_allowed("999", "alice") is True
     assert ch._is_allowed("999", "bob") is False

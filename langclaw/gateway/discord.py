@@ -127,25 +127,19 @@ class DiscordChannel(BaseChannel):
                 return
 
             if mentioned and client.user:
-                message.content = message.content.replace(
-                    f"<@{client.user.id}>", ""
-                ).strip()
+                message.content = message.content.replace(f"<@{client.user.id}>", "").strip()
 
             await self._on_message(message)
 
         @client.event
-        async def on_message_edit(
-            _before: discord.Message, after: discord.Message
-        ) -> None:
+        async def on_message_edit(_before: discord.Message, after: discord.Message) -> None:
             if after.author.bot:
                 return
             mentioned = client.user in after.mentions if client.user else False
             if not mentioned:
                 return
             if client.user:
-                after.content = after.content.replace(
-                    f"<@{client.user.id}>", ""
-                ).strip()
+                after.content = after.content.replace(f"<@{client.user.id}>", "").strip()
             await self._on_message(after)
 
         logger.info("DiscordChannel starting…")
@@ -194,12 +188,7 @@ class DiscordChannel(BaseChannel):
         # Truncate result to fit within Discord's limit, reserving room for
         # the header line and code-block fences.
         _CODE_BLOCK_OVERHEAD = len("```\n\n```") + 1
-        max_content = (
-            MAX_MESSAGE_LEN
-            - len(header)
-            - _CODE_BLOCK_OVERHEAD
-            - len(TRUNCATION_SUFFIX)
-        )
+        max_content = MAX_MESSAGE_LEN - len(header) - _CODE_BLOCK_OVERHEAD - len(TRUNCATION_SUFFIX)
         result_text = msg.content or ""
         if len(result_text) > max_content:
             result_text = result_text[:max_content] + TRUNCATION_SUFFIX
@@ -262,9 +251,7 @@ class DiscordChannel(BaseChannel):
                 except discord.HTTPException as exc:
                     if exc.status == 429:
                         retry_after = getattr(exc, "retry_after", 1.0)
-                        logger.warning(
-                            f"Discord rate limited, retrying in {retry_after}s"
-                        )
+                        logger.warning(f"Discord rate limited, retrying in {retry_after}s")
                         await asyncio.sleep(float(retry_after))
                         continue
                     if attempt == 2:
@@ -394,18 +381,13 @@ class DiscordChannel(BaseChannel):
                 continue
             try:
                 media_dir.mkdir(parents=True, exist_ok=True)
-                file_path = (
-                    media_dir
-                    / f"{attachment.id}_{attachment.filename.replace('/', '_')}"
-                )
+                file_path = media_dir / f"{attachment.id}_{attachment.filename.replace('/', '_')}"
                 await attachment.save(file_path)
                 media_paths.append(str(file_path))
                 content_parts.append(f"[attachment: {file_path}]")
             except Exception as exc:
                 logger.warning(f"Failed to download Discord attachment: {exc}")
-                content_parts.append(
-                    f"[attachment: {attachment.filename} - download failed]"
-                )
+                content_parts.append(f"[attachment: {attachment.filename} - download failed]")
 
         is_dm = isinstance(message.channel, discord.DMChannel)
         guild_id = str(message.guild.id) if message.guild else None
@@ -451,10 +433,12 @@ class DiscordChannel(BaseChannel):
         def _make_handler(cmd_name: str):
             async def handler(interaction: discord.Interaction) -> None:
                 await self._handle_slash(interaction, cmd_name)
+
             return handler
 
         for entry in self._command_router.list_commands():
             if entry.name == "cron":
+
                 @tree.command(
                     name="cron",
                     description=entry.description or "List or remove cron jobs",

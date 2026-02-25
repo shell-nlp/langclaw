@@ -175,15 +175,15 @@ class ProviderRegistry:
         result = []
         for spec in PROVIDERS:
             cfg = getattr(providers_cfg, spec.name, None)
-            has_key = bool(
-                (cfg and cfg.api_key) or os.environ.get(spec.env_key)
+            has_key = bool((cfg and cfg.api_key) or os.environ.get(spec.env_key))
+            result.append(
+                {
+                    "name": spec.name,
+                    "display": spec.display_name,
+                    "configured": "yes" if has_key else "no",
+                    "gateway": "yes" if spec.is_gateway else "no",
+                }
             )
-            result.append({
-                "name": spec.name,
-                "display": spec.display_name,
-                "configured": "yes" if has_key else "no",
-                "gateway": "yes" if spec.is_gateway else "no",
-            })
         return result
 
 

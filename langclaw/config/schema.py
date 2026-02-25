@@ -35,9 +35,7 @@ class _CommaListMixin:
         LANGCLAW__CHANNELS__TELEGRAM__ALLOW_FROM=   (empty → [])
     """
 
-    def decode_complex_value(
-        self, field_name: str, field_info: object, value: str
-    ) -> object:
+    def decode_complex_value(self, field_name: str, field_info: object, value: str) -> object:
         try:
             return json.loads(value)
         except (json.JSONDecodeError, ValueError):
@@ -140,9 +138,7 @@ class ProvidersConfig(BaseModel):
     anthropic: ProviderConfig = Field(default_factory=ProviderConfig)
     openrouter: ProviderConfig = Field(default_factory=ProviderConfig)
     google: ProviderConfig = Field(default_factory=ProviderConfig)
-    azure_openai: AzureOpenAIProviderConfig = Field(
-        default_factory=AzureOpenAIProviderConfig
-    )
+    azure_openai: AzureOpenAIProviderConfig = Field(default_factory=AzureOpenAIProviderConfig)
 
 
 class TelegramChannelConfig(BaseModel):
@@ -227,9 +223,7 @@ class PostgresCheckpointerConfig(BaseModel):
 class CheckpointerConfig(BaseModel):
     backend: Literal["sqlite", "postgres"] = "sqlite"
     sqlite: SqliteCheckpointerConfig = Field(default_factory=SqliteCheckpointerConfig)
-    postgres: PostgresCheckpointerConfig = Field(
-        default_factory=PostgresCheckpointerConfig
-    )
+    postgres: PostgresCheckpointerConfig = Field(default_factory=PostgresCheckpointerConfig)
 
 
 class AsyncioBusConfig(BaseModel):
@@ -275,9 +269,7 @@ class CronDataStoreConfig(BaseModel):
 
     backend: Literal["memory", "sqlite", "postgres"] = "sqlite"
     sqlite: CronSQLiteDataStoreConfig = Field(default_factory=CronSQLiteDataStoreConfig)
-    postgres: CronPostgresDataStoreConfig = Field(
-        default_factory=CronPostgresDataStoreConfig
-    )
+    postgres: CronPostgresDataStoreConfig = Field(default_factory=CronPostgresDataStoreConfig)
 
 
 class CronAsyncpgEventBrokerConfig(BaseModel):
@@ -307,15 +299,9 @@ class CronEventBrokerConfig(BaseModel):
     """
 
     backend: Literal["local", "asyncpg", "psycopg", "redis"] = "local"
-    asyncpg: CronAsyncpgEventBrokerConfig = Field(
-        default_factory=CronAsyncpgEventBrokerConfig
-    )
-    psycopg: CronPsycopgEventBrokerConfig = Field(
-        default_factory=CronPsycopgEventBrokerConfig
-    )
-    redis: CronRedisEventBrokerConfig = Field(
-        default_factory=CronRedisEventBrokerConfig
-    )
+    asyncpg: CronAsyncpgEventBrokerConfig = Field(default_factory=CronAsyncpgEventBrokerConfig)
+    psycopg: CronPsycopgEventBrokerConfig = Field(default_factory=CronPsycopgEventBrokerConfig)
+    redis: CronRedisEventBrokerConfig = Field(default_factory=CronRedisEventBrokerConfig)
 
 
 class CronConfig(BaseModel):
@@ -342,9 +328,7 @@ class GmailConfig(BaseModel):
     client_secret: str = ""
     """OAuth 2.0 client secret from the Google Cloud Console."""
 
-    token_path: str = Field(
-        default_factory=lambda: str(_LANGCLAW_HOME / "gmail_token.json")
-    )
+    token_path: str = Field(default_factory=lambda: str(_LANGCLAW_HOME / "gmail_token.json"))
     """Path to the persisted OAuth refresh/access token file."""
 
     readonly: bool = True

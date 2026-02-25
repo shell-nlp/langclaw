@@ -4,7 +4,7 @@ This document details the core design principles and architectural decisions of 
 
 ## Design Vision: A Framework, Not an App
 
-Langclaw's fundamental philosophy is to be a **framework** that developers build upon, similar to FastAPI or Flask, rather than a standalone application to be forked. 
+Langclaw's fundamental philosophy is to be a **framework** that developers build upon, similar to FastAPI or Flask, rather than a standalone application to be forked.
 
 ### Core Tenets
 
@@ -20,7 +20,7 @@ While the README shows the physical data flow, here we analyze the *why* behind 
 Previously, developers had to manually wire the LangGraph agent, gateway, bus, and channels. The introduction of the `Langclaw` class unified this. It serves as the central registry and orchestrator, managing the lifecycle of the entire system (startup/shutdown hooks, tool scoping, and channel initialization).
 
 ### Message Bus (`BaseMessageBus`)
-Channels and the cron scheduler do not talk to the agent directly. They publish `InboundMessage` objects to a unified bus. 
+Channels and the cron scheduler do not talk to the agent directly. They publish `InboundMessage` objects to a unified bus.
 - **Why?** This decoupling allows the gateway to horizontally scale. You can swap the default `asyncio` memory bus for RabbitMQ or Kafka in distributed environments.
 
 ### Middleware Pipeline

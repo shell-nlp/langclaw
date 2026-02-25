@@ -76,8 +76,7 @@ class WebSocketChannel(BaseChannel):
             import websockets  # noqa: F401
         except ImportError as exc:
             raise ImportError(
-                "WebSocketChannel requires 'websockets'. "
-                "Install with: uv add 'langclaw[websocket]'"
+                "WebSocketChannel requires 'websockets'. Install with: uv add 'langclaw[websocket]'"
             ) from exc
 
         self._bus = bus
@@ -120,20 +119,26 @@ class WebSocketChannel(BaseChannel):
                 try:
                     data = json.loads(raw)
                 except (json.JSONDecodeError, TypeError):
-                    await self._send_json(ws, {
-                        "type": "error",
-                        "content": "Invalid JSON.",
-                    })
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "error",
+                            "content": "Invalid JSON.",
+                        },
+                    )
                     continue
 
                 conn.user_id = data.get("user_id", conn.user_id or "ws-anon")
                 conn.context_id = data.get("context_id", conn.context_id or "default")
 
                 if not self._is_allowed(conn.user_id):
-                    await self._send_json(ws, {
-                        "type": "error",
-                        "content": "Not authorised.",
-                    })
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "error",
+                            "content": "Not authorised.",
+                        },
+                    )
                     continue
 
                 msg_type = data.get("type", "message")
@@ -161,10 +166,13 @@ class WebSocketChannel(BaseChannel):
                         display_name=conn.user_id,
                     )
                     response = await self._command_router.dispatch(cmd, ctx)
-                    await self._send_json(ws, {
-                        "type": "command",
-                        "content": response,
-                    })
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "command",
+                            "content": response,
+                        },
+                    )
                     continue
 
                 if self._bus is None:
@@ -194,33 +202,48 @@ class WebSocketChannel(BaseChannel):
     # ------------------------------------------------------------------
 
     async def send_tool_progress(self, msg: OutboundMessage) -> None:
-        await self._broadcast(msg.user_id, msg.context_id, {
-            "type": "tool_progress",
-            "content": msg.content,
-            "metadata": msg.metadata,
-        })
+        await self._broadcast(
+            msg.user_id,
+            msg.context_id,
+            {
+                "type": "tool_progress",
+                "content": msg.content,
+                "metadata": msg.metadata,
+            },
+        )
 
     async def send_tool_result(self, msg: OutboundMessage) -> None:
-        await self._broadcast(msg.user_id, msg.context_id, {
-            "type": "tool_result",
-            "content": msg.content,
-            "metadata": msg.metadata,
-        })
+        await self._broadcast(
+            msg.user_id,
+            msg.context_id,
+            {
+                "type": "tool_result",
+                "content": msg.content,
+                "metadata": msg.metadata,
+            },
+        )
 
     async def send_ai_message(self, msg: OutboundMessage) -> None:
         if not msg.content:
             return
-        await self._broadcast(msg.user_id, msg.context_id, {
-            "type": "ai",
-            "content": msg.content,
-        })
+        await self._broadcast(
+            msg.user_id,
+            msg.context_id,
+            {
+                "type": "ai",
+                "content": msg.content,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
     async def _broadcast(
-        self, user_id: str, context_id: str, payload: dict[str, Any],
+        self,
+        user_id: str,
+        context_id: str,
+        payload: dict[str, Any],
     ) -> None:
         """Send *payload* to every connection matching the identity pair."""
         chat_id = f"{user_id}:{context_id}"
