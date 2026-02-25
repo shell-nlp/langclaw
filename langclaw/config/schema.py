@@ -79,12 +79,15 @@ def _parse_str_dict(v: object) -> dict[str, str]:
 
     Accepts:
         ``{"a": "b"}``              — pass-through
+        ``['alice:admin','bob:viewer']`` — list (from env source splitting)
         ``'alice:admin,bob:viewer'`` — comma+colon format
         ``'{"a":"b"}'``             — JSON string
         ``''``                       — empty → {}
     """
     if isinstance(v, dict):
         return {str(k): str(val) for k, val in v.items()}
+    if isinstance(v, list):
+        v = ",".join(str(item) for item in v)
     if isinstance(v, str):
         v = v.strip()
         if not v:
