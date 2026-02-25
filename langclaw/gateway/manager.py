@@ -66,7 +66,8 @@ class GatewayManager:
         self._cron_manager = cron_manager
         self._sessions = SessionManager()
         self._command_router = CommandRouter(
-            self._sessions, self._cron_manager,
+            self._sessions,
+            self._cron_manager,
         )
         self._channel_map: dict[str, BaseChannel] = {
             ch.name: ch for ch in self._channels
@@ -198,7 +199,7 @@ class GatewayManager:
                             channel=msg.channel,
                             user_id=msg.user_id,
                             context_id=msg.context_id,
-                                chat_id=msg.chat_id,
+                            chat_id=msg.chat_id,
                             content=content,
                             type="tool_result",
                             metadata={"tool_call_id": m.tool_call_id or ""},
@@ -230,19 +231,36 @@ class GatewayManager:
 
         Returns the role string, or ``None`` when permissions are
         disabled so the caller can skip passing context entirely.
+
+        Checks both numeric user ID and username (from metadata)
+        against the channel's ``user_roles`` mapping.
         """
         perms = self._config.permissions
         if not perms.enabled:
             return None
         ch_cfg = getattr(
-            self._config.channels, msg.channel, None,
+            self._config.channels,
+            msg.channel,
+            None,
         )
         if ch_cfg is None:
             return perms.default_role
         user_roles: dict[str, str] = getattr(
-            ch_cfg, "user_roles", {},
+            ch_cfg,
+            "user_roles",
+            {},
         )
-        return user_roles.get(msg.user_id, perms.default_role)
+        logger.debug(f"Checking permissions for user_id {msg.user_id}")
+        role = user_roles.get(msg.user_id)
+        if role is None:
+            username = (msg.metadata or {}).get("username", "")
+            logger.debug(
+                f"No role found for user_id {msg.user_id}, "
+                f"checking username {username}"
+            )
+            if username:
+                role = user_roles.get(username)
+        return role if role is not None else perms.default_role
 
     async def _handle(self, msg: InboundMessage) -> None:
         """
@@ -255,8 +273,7 @@ class GatewayManager:
         channel = self._channel_map.get(msg.channel)
         if channel is None:
             logger.warning(
-                f"No channel handler for '{msg.channel}'"
-                " — dropping message.",
+                f"No channel handler for '{msg.channel}'" " — dropping message.",
             )
             return
 
@@ -297,13 +314,14 @@ class GatewayManager:
                 **stream_kwargs,
             ):
                 await self._stream_updates_to_outbound_message(
-                    chunk, msg, channel,
+                    chunk,
+                    msg,
+                    channel,
                 )
 
         except Exception:
             logger.exception(
-                f"Error handling message from"
-                f" {msg.channel}/{msg.user_id}",
+                f"Error handling message from" f" {msg.channel}/{msg.user_id}",
             )
             try:
                 await channel.send(
@@ -312,10 +330,7 @@ class GatewayManager:
                         user_id=msg.user_id,
                         context_id=msg.context_id,
                         chat_id=msg.chat_id,
-                        content=(
-                            "Sorry, something went wrong."
-                            " Please try again."
-                        ),
+                        content=("Sorry, something went wrong." " Please try again."),
                         type="ai",
                     )
                 )
