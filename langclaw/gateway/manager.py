@@ -165,6 +165,10 @@ class GatewayManager:
         """
         from langchain_core.messages import AIMessage, ToolMessage
 
+        if not hasattr(self, "_tool_call_names"):
+            self._tool_call_names: dict[str, str] = {}
+        _tool_call_names = self._tool_call_names
+
         for node_name, node_update in chunk.items():
             if not isinstance(node_update, dict):
                 continue
@@ -180,17 +184,20 @@ class GatewayManager:
                 # ── Tool-progress: LLM decided to call a tool ─────────────
                 if isinstance(m, AIMessage) and m.tool_calls:
                     for tc in m.tool_calls:
+                        tool_name = tc.get("name", "")
+                        tool_call_id = tc.get("id", "")
+                        _tool_call_names[tool_call_id] = tool_name
                         await channel.send(
                             OutboundMessage(
                                 channel=msg.channel,
                                 user_id=msg.user_id,
                                 context_id=msg.context_id,
                                 chat_id=msg.chat_id,
-                                content="",
+                                content=tool_name,
                                 type="tool_progress",
                                 metadata={
-                                    "tool_call_id": tc.get("id", ""),
-                                    "tool": tc.get("name", ""),
+                                    "tool_call_id": tool_call_id,
+                                    "tool": tool_name,
                                     "args": tc.get("args", {}),
                                 },
                             )
@@ -201,6 +208,7 @@ class GatewayManager:
                     content = m.content
                     if not isinstance(content, str):
                         content = str(content)
+                    tc_id = m.tool_call_id or ""
                     await channel.send(
                         OutboundMessage(
                             channel=msg.channel,
@@ -209,7 +217,10 @@ class GatewayManager:
                             chat_id=msg.chat_id,
                             content=content,
                             type="tool_result",
-                            metadata={"tool_call_id": m.tool_call_id or ""},
+                            metadata={
+                                "tool_call_id": tc_id,
+                                "tool": _tool_call_names.get(tc_id, m.name or ""),
+                            },
                         )
                     )
 
