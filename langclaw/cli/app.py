@@ -331,7 +331,32 @@ def cron_remove(
     job_id: Annotated[str, typer.Argument(help="Job ID to remove.")],
 ) -> None:
     """Remove a scheduled cron job by ID."""
-    typer.echo(f"Remove job {job_id} via the running gateway process.")
+    asyncio.run(_cron_remove_async(job_id))
+
+
+async def _cron_remove_async(job_id: str) -> None:
+    from langclaw.cron import remove_job_from_store
+
+    cfg = load_config()
+    if cfg.cron.data_store.backend == "memory":
+        typer.echo(
+            "Cannot remove jobs: the 'memory' data store does not persist jobs. "
+            "Set cron.data_store.backend to 'sqlite' (default) or 'postgres'.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    try:
+        removed = await remove_job_from_store(cfg.cron, job_id)
+    except Exception as exc:
+        typer.echo(f"Error removing job: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    if removed:
+        typer.echo(f"Job {job_id} removed.")
+    else:
+        typer.echo(f"Job {job_id} not found.", err=True)
+        raise typer.Exit(1)
 
 
 # ---------------------------------------------------------------------------

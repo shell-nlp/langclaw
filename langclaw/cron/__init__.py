@@ -184,6 +184,50 @@ async def list_jobs_from_store(config: CronConfig) -> list[CronJob]:
     return [job for s in schedules if (job := _schedule_to_cronjob(s)) is not None]
 
 
+async def remove_job_from_store(config: CronConfig, job_id: str) -> bool:
+    """Remove a persisted cron job directly from the data store.
+
+    Opens a short-lived ``AsyncScheduler``, removes the schedule matching
+    *job_id*, and tears down immediately.  This is the implementation behind
+    ``langclaw cron remove``: the CLI does not need a running gateway.
+
+    Args:
+        config: ``CronConfig`` section from ``LangclawConfig``.
+        job_id: The schedule ID to remove.
+
+    Returns:
+        ``True`` if the job was found and removed, ``False`` otherwise.
+
+    Raises:
+        ValueError: if the data store backend is ``"memory"``.
+    """
+    if config.data_store.backend == "memory":
+        raise ValueError(
+            "Cannot remove jobs with the memory data store: no persistence. "
+            "Set cron.data_store.backend to 'sqlite' or 'postgres'."
+        )
+
+    try:
+        from apscheduler import AsyncScheduler
+    except ImportError as exc:
+        raise ImportError(
+            "remove_job_from_store requires apscheduler>=4. Install with: uv add 'apscheduler>=4'"
+        ) from exc
+
+    data_store = _make_data_store(config.data_store)
+    event_broker = _make_event_broker(config.event_broker)
+
+    async with AsyncScheduler(
+        data_store=data_store,
+        event_broker=event_broker,
+    ) as scheduler:
+        try:
+            await scheduler.remove_schedule(job_id)
+            return True
+        except Exception:
+            return False
+
+
 # ---------------------------------------------------------------------------
 # Public factory
 # ---------------------------------------------------------------------------
@@ -222,4 +266,5 @@ __all__ = [
     "CronManager",
     "list_jobs_from_store",
     "make_cron_manager",
+    "remove_job_from_store",
 ]
