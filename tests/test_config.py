@@ -292,7 +292,8 @@ def test_default_skills_exist():
     from langclaw.agents.builder import _DEFAULTS_DIR
 
     assert (_DEFAULTS_DIR / "AGENTS.md").exists()
-    assert (_DEFAULTS_DIR / "skills" / "summarize" / "SKILL.md").exists()
+    assert (_DEFAULTS_DIR / "skills" / "cron" / "SKILL.md").exists()
+    assert (_DEFAULTS_DIR / "skills" / "skill-creator" / "SKILL.md").exists()
 
 
 def test_config_workspace_paths():
