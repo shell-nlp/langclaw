@@ -1,0 +1,314 @@
+"use client";
+
+import { useState } from "react";
+import {
+  MapPin,
+  Phone,
+  ExternalLink,
+  Bed,
+  Bath,
+  Maximize2,
+  X,
+  MessageCircle,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useListingStore } from "@/stores/listing-store";
+import { SkipDialog } from "./skip-dialog";
+import { PIPELINE_STAGES } from "@/types";
+import type { Listing, PipelineStage } from "@/types";
+
+interface ListingDetailProps {
+  listing: Listing;
+  campaignId: string;
+  onClose: () => void;
+}
+
+export function ListingDetail({
+  listing,
+  campaignId,
+  onClose,
+}: ListingDetailProps) {
+  const { updateStage, updateNotes } = useListingStore();
+  const [notes, setNotes] = useState(listing.user_notes || "");
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleStageChange = async (stage: PipelineStage) => {
+    if (stage === "skipped") {
+      setSkipOpen(true);
+      return;
+    }
+    await updateStage(campaignId, listing.id, stage);
+  };
+
+  const handleNotesBlur = async () => {
+    if (notes !== (listing.user_notes || "")) {
+      setSaving(true);
+      await updateNotes(campaignId, listing.id, notes);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Sheet open onOpenChange={() => onClose()}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-base pr-6">
+              {listing.title || "Chi tiết tin đăng"}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-5">
+            {/* Thumbnail */}
+            {listing.thumbnail_url && (
+              <img
+                src={listing.thumbnail_url}
+                alt=""
+                className="w-full h-48 object-cover rounded-lg bg-muted"
+              />
+            )}
+
+            {/* Price */}
+            <div>
+              <p className="text-2xl font-bold">
+                {listing.price_display || formatPrice(listing.price_vnd)}
+              </p>
+              {listing.deposit_vnd && (
+                <p className="text-sm text-muted-foreground">
+                  Cọc: {formatPrice(listing.deposit_vnd)}
+                </p>
+              )}
+            </div>
+
+            {/* Key info grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {listing.area_sqm != null && (
+                <InfoItem
+                  icon={<Maximize2 className="h-4 w-4" />}
+                  label="Diện tích"
+                  value={`${listing.area_sqm} m²`}
+                />
+              )}
+              {listing.bedrooms != null && (
+                <InfoItem
+                  icon={<Bed className="h-4 w-4" />}
+                  label="Phòng ngủ"
+                  value={`${listing.bedrooms} PN`}
+                />
+              )}
+              {listing.bathrooms != null && (
+                <InfoItem
+                  icon={<Bath className="h-4 w-4" />}
+                  label="Phòng tắm"
+                  value={`${listing.bathrooms} PT`}
+                />
+              )}
+              {listing.district && (
+                <InfoItem
+                  icon={<MapPin className="h-4 w-4" />}
+                  label="Khu vực"
+                  value={listing.district}
+                />
+              )}
+            </div>
+
+            {/* Address */}
+            {listing.address && (
+              <div>
+                <p className="text-sm font-medium mb-1">Địa chỉ</p>
+                <p className="text-sm text-muted-foreground">
+                  {listing.address}
+                </p>
+              </div>
+            )}
+
+            {/* Description */}
+            {listing.description && (
+              <div>
+                <p className="text-sm font-medium mb-1">Mô tả</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {listing.description}
+                </p>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Landlord contact */}
+            <div>
+              <p className="text-sm font-medium mb-2">Liên hệ</p>
+              <div className="space-y-2">
+                {listing.landlord_name && (
+                  <p className="text-sm">{listing.landlord_name}</p>
+                )}
+                <div className="flex gap-2">
+                  {listing.landlord_phone && (
+                    <>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`tel:${listing.landlord_phone}`}>
+                          <Phone className="h-3.5 w-3.5 mr-1" />
+                          {listing.landlord_phone}
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`https://zalo.me/${listing.landlord_phone}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                          Zalo
+                        </a>
+                      </Button>
+                    </>
+                  )}
+                  {listing.landlord_facebook_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={listing.landlord_facebook_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                        Facebook
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Source link */}
+            {listing.listing_url && (
+              <Button variant="link" size="sm" className="px-0" asChild>
+                <a
+                  href={listing.listing_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                  Xem bài gốc
+                </a>
+              </Button>
+            )}
+
+            <Separator />
+
+            {/* Actions */}
+            <div>
+              <p className="text-sm font-medium mb-2">Trạng thái</p>
+              <div className="flex gap-2">
+                <Select
+                  value={listing.stage}
+                  onValueChange={(v) =>
+                    handleStageChange(v as PipelineStage)
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PIPELINE_STAGES.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {listing.skip_reason && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lý do bỏ qua: {listing.skip_reason}
+                </p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <p className="text-sm font-medium mb-1.5">Ghi chú</p>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Thêm ghi chú riêng cho tin này..."
+                rows={3}
+                className="text-sm"
+              />
+              {saving && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Đang lưu...
+                </p>
+              )}
+            </div>
+
+            {/* Platform + date metadata */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {listing.source_platform && (
+                <Badge variant="outline" className="text-xs">
+                  {listing.source_platform}
+                </Badge>
+              )}
+              {listing.posted_date && (
+                <span>Đăng: {listing.posted_date}</span>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <SkipDialog
+        open={skipOpen}
+        onClose={() => setSkipOpen(false)}
+        onSkip={async (reason) => {
+          await updateStage(campaignId, listing.id, "skipped", reason);
+          setSkipOpen(false);
+        }}
+      />
+    </>
+  );
+}
+
+function InfoItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+      <div className="text-muted-foreground">{icon}</div>
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function formatPrice(priceVnd: number | null): string {
+  if (!priceVnd) return "Liên hệ";
+  if (priceVnd >= 1_000_000) {
+    return `${(priceVnd / 1_000_000).toFixed(1).replace(".0", "")} triệu/tháng`;
+  }
+  return `${priceVnd.toLocaleString("vi-VN")} đ/tháng`;
+}

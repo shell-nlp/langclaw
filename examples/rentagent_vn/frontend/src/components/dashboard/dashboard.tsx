@@ -1,0 +1,104 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useCampaignStore } from "@/stores/campaign-store";
+import { useActivityStore } from "@/stores/activity-store";
+import { useScanStreamStore } from "@/stores/scan-stream-store";
+import { useCampaign } from "@/hooks/use-campaign";
+import { useScanStream } from "@/hooks/use-scan-stream";
+import { TopBar } from "./top-bar";
+import { StatsPanel } from "./stats-panel";
+import { Pipeline } from "./pipeline";
+import { ListingDetail } from "./listing-detail";
+import { ScanControls } from "./scan-controls";
+import { ScanProgressPanel } from "./scan-progress-panel";
+import { ChatPanel } from "@/components/chat/chat-panel";
+import { ActivityFeed } from "@/components/activity/activity-feed";
+import { useListingStore } from "@/stores/listing-store";
+
+interface DashboardProps {
+  campaignId: string;
+}
+
+export function Dashboard({ campaignId }: DashboardProps) {
+  const { campaign, fetchStats } = useCampaignStore();
+  const { selectedListing, selectListing, fetchListings } = useListingStore();
+  const { isScanning, latestScan, fetchScans, fetchActivities } =
+    useActivityStore();
+  const scanStatus = useScanStreamStore((s) => s.status);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // Load all campaign data + poll
+  useCampaign(campaignId);
+
+  // Connect SSE when scanning
+  useScanStream(campaignId, isScanning && latestScan ? latestScan.id : null);
+
+  // Refetch data when scan completes
+  useEffect(() => {
+    if (scanStatus === "complete") {
+      fetchListings(campaignId);
+      fetchStats(campaignId);
+      fetchScans(campaignId);
+      fetchActivities(campaignId);
+    }
+  }, [
+    scanStatus,
+    campaignId,
+    fetchListings,
+    fetchStats,
+    fetchScans,
+    fetchActivities,
+  ]);
+
+  if (!campaign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">
+          Đang tải...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <TopBar campaign={campaign} onChatToggle={() => setChatOpen(!chatOpen)} />
+
+      <div className="flex-1 flex">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="p-4 flex items-center justify-between">
+            <StatsPanel />
+            <ScanControls campaignId={campaignId} />
+          </div>
+
+          <ScanProgressPanel />
+
+          <div className="flex-1 overflow-hidden px-4 pb-4">
+            <Pipeline campaignId={campaignId} />
+          </div>
+        </div>
+      </div>
+
+      {/* Listing detail drawer */}
+      {selectedListing && (
+        <ListingDetail
+          listing={selectedListing}
+          campaignId={campaignId}
+          onClose={() => selectListing(null)}
+        />
+      )}
+
+      {/* Chat panel */}
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        contextId={campaignId}
+      />
+
+      {/* Activity feed */}
+      <ActivityFeed campaignId={campaignId} />
+    </div>
+  );
+}
