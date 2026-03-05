@@ -106,10 +106,10 @@ async def contact_landlord(
     landlord_phone: str,
     message: str,
 ) -> dict[str, Any]:
-    """Draft a message to a landlord about a rental listing.
+    """Send a message to a landlord about a rental listing via Zalo.
 
-    NOT YET IMPLEMENTED — returns the landlord's contact info and a
-    draft message so the user can reach out directly via Zalo or phone.
+    If Zalo is connected, sends the message directly. Otherwise, returns
+    the landlord's contact info so the user can reach out manually.
 
     Args:
         landlord_name: Name of the landlord/poster.
@@ -117,18 +117,90 @@ async def contact_landlord(
         message: The message to send to the landlord, e.g. asking about
             availability, price negotiation, or scheduling a viewing.
     """
-    logger.info("contact_landlord stub called for {}", landlord_name)
-    return {
-        "error": "Landlord outreach is not yet implemented.",
-        "suggestion": "Contact the landlord directly using the info below.",
-        "landlord_name": landlord_name,
-        "landlord_phone": landlord_phone,
-        "message_draft": message,
-        "channels": {
-            "zalo": f"https://zalo.me/{landlord_phone}" if landlord_phone else None,
-            "phone": landlord_phone,
-        },
-    }
+    import httpx
+
+    logger.info("contact_landlord called for {}", landlord_name)
+
+    zalo_api_url = os.environ.get("ZALO_SERVICE_URL", "http://localhost:8001")
+
+    # Check Zalo connection status
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            status_resp = await client.get(f"{zalo_api_url}/auth/status")
+            if status_resp.status_code != 200:
+                raise httpx.ConnectError("Service unavailable")
+            status = status_resp.json()
+    except (httpx.ConnectError, httpx.TimeoutException):
+        logger.info("Zalo service not available, returning manual contact info")
+        return {
+            "status": "zalo_unavailable",
+            "suggestion": ("Zalo service is not running. Contact the landlord directly."),
+            "landlord_name": landlord_name,
+            "landlord_phone": landlord_phone,
+            "message_draft": message,
+            "channels": {
+                "zalo": (f"https://zalo.me/{landlord_phone}" if landlord_phone else None),
+                "phone": landlord_phone,
+            },
+        }
+
+    if not status.get("connected"):
+        logger.info("Zalo not connected, returning manual contact info")
+        return {
+            "status": "zalo_not_connected",
+            "suggestion": (
+                "Zalo is not connected. Ask the user to connect Zalo "
+                "in settings, then contact the landlord directly."
+            ),
+            "landlord_name": landlord_name,
+            "landlord_phone": landlord_phone,
+            "message_draft": message,
+            "channels": {
+                "zalo": (f"https://zalo.me/{landlord_phone}" if landlord_phone else None),
+                "phone": landlord_phone,
+            },
+        }
+
+    # Zalo is connected — send the message
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            send_resp = await client.post(
+                f"{zalo_api_url}/message/send",
+                json={"phone": landlord_phone, "text": message},
+            )
+            if send_resp.status_code != 200:
+                error_data = send_resp.json()
+                return {
+                    "status": "send_failed",
+                    "error": error_data.get("error", "Unknown error"),
+                    "landlord_name": landlord_name,
+                    "landlord_phone": landlord_phone,
+                    "message_draft": message,
+                }
+
+            result = send_resp.json()
+            logger.info("Message sent to {} via Zalo", landlord_phone)
+            return {
+                "status": "sent",
+                "message": (f"Message sent to {landlord_name} ({landlord_phone}) via Zalo."),
+                "zalo_user_id": result.get("userId"),
+                "landlord_name": landlord_name,
+                "landlord_phone": landlord_phone,
+            }
+    except Exception as exc:
+        logger.error("Failed to send Zalo message: {}", exc)
+        return {
+            "status": "send_failed",
+            "error": str(exc),
+            "suggestion": ("Failed to send via Zalo. Contact the landlord directly."),
+            "landlord_name": landlord_name,
+            "landlord_phone": landlord_phone,
+            "message_draft": message,
+            "channels": {
+                "zalo": (f"https://zalo.me/{landlord_phone}" if landlord_phone else None),
+                "phone": landlord_phone,
+            },
+        }
 
 
 @tool

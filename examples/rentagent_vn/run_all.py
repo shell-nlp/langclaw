@@ -1,4 +1,4 @@
-"""Start both the Langclaw agent (WS gateway) and FastAPI REST API.
+"""Start all RentAgent VN services: Langclaw agent, FastAPI REST API, and Zalo service.
 
 Usage:
     python -m examples.rentagent_vn.run_all
@@ -7,7 +7,9 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -17,6 +19,9 @@ from examples.rentagent_vn.api.scan_broker import ScanEvent, scan_broker
 from examples.rentagent_vn.api.server import create_api_app, set_scan_trigger
 from examples.rentagent_vn.db import queries
 from examples.rentagent_vn.db.connection import init_db
+
+# Global reference to Zalo subprocess for cleanup
+_zalo_process: subprocess.Popen[bytes] | None = None
 
 
 async def _build_scan_trigger(app_module: Any) -> Any:
@@ -108,37 +113,98 @@ async def _build_scan_trigger(app_module: Any) -> Any:
     return trigger_scan
 
 
+def _start_zalo_service() -> subprocess.Popen[bytes] | None:
+    """Start the Zalo Node.js service if available.
+
+    Returns the subprocess handle or None if not available.
+    """
+    global _zalo_process
+
+    zalo_service_dir = Path(__file__).parent / "zalo-service"
+    node_modules = zalo_service_dir / "node_modules"
+
+    if not zalo_service_dir.exists():
+        logger.info("Zalo service directory not found, skipping")
+        return None
+
+    if not node_modules.exists():
+        logger.info(
+            "Zalo service not installed (no node_modules). Run: cd {} && npm install",
+            zalo_service_dir,
+        )
+        return None
+
+    try:
+        _zalo_process = subprocess.Popen(
+            ["node", "index.js"],
+            cwd=zalo_service_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        logger.info("Zalo service started on :8001 (pid={})", _zalo_process.pid)
+        return _zalo_process
+    except FileNotFoundError:
+        logger.warning("Node.js not found, Zalo service not started")
+        return None
+    except Exception as exc:
+        logger.warning("Failed to start Zalo service: {}", exc)
+        return None
+
+
+def _stop_zalo_service() -> None:
+    """Stop the Zalo service subprocess if running."""
+    global _zalo_process
+
+    if _zalo_process is not None:
+        logger.info("Stopping Zalo service (pid={})", _zalo_process.pid)
+        _zalo_process.terminate()
+        try:
+            _zalo_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _zalo_process.kill()
+        _zalo_process = None
+
+
 async def main() -> None:
-    """Start both servers."""
-    # Initialize database first
-    await init_db()
+    """Start all services."""
+    # Start Zalo service (optional)
+    zalo_proc = _start_zalo_service()
 
-    # Import the app module to access its components
-    from examples.rentagent_vn import appx as app_module
+    try:
+        # Initialize database first
+        await init_db()
 
-    # Build and register the scan trigger
-    trigger = await _build_scan_trigger(app_module)
-    set_scan_trigger(trigger)
+        # Import the app module to access its components
+        from examples.rentagent_vn import appx as app_module
 
-    # Create FastAPI app (skip lifespan DB init since we already did it)
-    api_app = create_api_app()
+        # Build and register the scan trigger
+        trigger = await _build_scan_trigger(app_module)
+        set_scan_trigger(trigger)
 
-    # Configure uvicorn for the REST API
-    config = uvicorn.Config(
-        api_app,
-        host="0.0.0.0",
-        port=8000,
-        log_level="info",
-    )
-    api_server = uvicorn.Server(config)
+        # Create FastAPI app (skip lifespan DB init since we already did it)
+        api_app = create_api_app()
 
-    logger.info("Starting RentAgent VN — REST API on :8000, WS gateway on :18789")
+        # Configure uvicorn for the REST API
+        config = uvicorn.Config(
+            api_app,
+            host="0.0.0.0",
+            port=8000,
+            log_level="info",
+        )
+        api_server = uvicorn.Server(config)
 
-    # Run both servers concurrently
-    await asyncio.gather(
-        api_server.serve(),
-        app_module.app._run_async(),
-    )
+        services = ["REST API on :8000", "WS gateway on :18789"]
+        if zalo_proc:
+            services.append("Zalo service on :8001")
+        logger.info("Starting RentAgent VN — {}", ", ".join(services))
+
+        # Run both servers concurrently
+        await asyncio.gather(
+            api_server.serve(),
+            app_module.app._run_async(),
+        )
+    finally:
+        _stop_zalo_service()
 
 
 if __name__ == "__main__":
