@@ -1,0 +1,130 @@
+"""Pydantic request/response models for the REST API."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+# ---------------------------------------------------------------------------
+# Campaign
+# ---------------------------------------------------------------------------
+
+
+class CreateCampaignRequest(BaseModel):
+    name: str = "Chiến dịch mới"
+    preferences: dict[str, Any] = Field(default_factory=dict)
+    sources: list[str] = Field(default_factory=list)
+    scan_frequency: str = "manual"
+
+
+class UpdateCampaignRequest(BaseModel):
+    name: str | None = None
+    preferences: dict[str, Any] | None = None
+    sources: list[str] | None = None
+    scan_frequency: str | None = None
+    status: str | None = None
+
+
+class CampaignResponse(BaseModel):
+    id: str
+    name: str
+    preferences: dict[str, Any]
+    sources: list[str]
+    scan_frequency: str
+    status: str
+    created_at: str
+    updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# Listing
+# ---------------------------------------------------------------------------
+
+
+class UpdateListingRequest(BaseModel):
+    stage: str | None = None
+    skip_reason: str | None = None
+    user_notes: str | None = None
+
+
+class ListingResponse(BaseModel):
+    id: str
+    campaign_id: str
+    stage: str
+    title: str | None = None
+    description: str | None = None
+    price_vnd: float | None = None
+    price_display: str | None = None
+    deposit_vnd: float | None = None
+    address: str | None = None
+    district: str | None = None
+    city: str | None = None
+    area_sqm: float | None = None
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    listing_url: str | None = None
+    thumbnail_url: str | None = None
+    posted_date: str | None = None
+    source_platform: str | None = None
+    landlord_name: str | None = None
+    landlord_phone: str | None = None
+    landlord_zalo: str | None = None
+    landlord_facebook_url: str | None = None
+    landlord_contact_method: str | None = None
+    match_score: float | None = None
+    skip_reason: str | None = None
+    user_notes: str | None = None
+    scan_id: str | None = None
+    created_at: str
+    updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# Scan
+# ---------------------------------------------------------------------------
+
+
+class ScanResponse(BaseModel):
+    id: str
+    campaign_id: str
+    job_id: str | None = None
+    status: str
+    listings_found: int = 0
+    new_listings: int = 0
+    errors: list[dict[str, Any]] = Field(default_factory=list)
+    started_at: str
+    completed_at: str | None = None
+
+
+class TriggerScanRequest(BaseModel):
+    """Optional overrides when triggering a manual scan."""
+
+    query: str | None = None  # Override the auto-generated query
+
+
+# ---------------------------------------------------------------------------
+# Activity
+# ---------------------------------------------------------------------------
+
+
+class ActivityResponse(BaseModel):
+    id: int
+    campaign_id: str
+    scan_id: str | None = None
+    event_type: str
+    message: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+
+class StatsResponse(BaseModel):
+    total_listings: int = 0
+    by_stage: dict[str, int] = Field(default_factory=dict)
+    new_today: int = 0
+    total_scans: int = 0
