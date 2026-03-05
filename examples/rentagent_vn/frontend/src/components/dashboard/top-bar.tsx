@@ -1,9 +1,13 @@
 "use client";
 
-import { MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MessageSquare, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useActivityStore } from "@/stores/activity-store";
+import { useZaloStore } from "@/stores/zalo-store";
+import { ZaloSettingsDialog } from "@/components/zalo/zalo-settings-dialog";
+import { cn } from "@/lib/utils";
 import type { Campaign } from "@/types";
 
 interface TopBarProps {
@@ -13,6 +17,14 @@ interface TopBarProps {
 
 export function TopBar({ campaign, onChatToggle }: TopBarProps) {
   const { isScanning, latestScan } = useActivityStore();
+  const { status, fetchStatus } = useZaloStore();
+  const [zaloSettingsOpen, setZaloSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  const zaloConnected = status?.connected ?? false;
 
   const lastScanTime = latestScan?.completed_at || latestScan?.started_at;
   const formattedTime = lastScanTime
@@ -49,6 +61,23 @@ export function TopBar({ campaign, onChatToggle }: TopBarProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setZaloSettingsOpen(true)}
+            className="relative"
+            title={zaloConnected ? "Zalo đã kết nối" : "Kết nối Zalo"}
+          >
+            <div className="relative">
+              <MessageCircle className="h-4 w-4" />
+              <span
+                className={cn(
+                  "absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full",
+                  zaloConnected ? "bg-green-500" : "bg-red-500"
+                )}
+              />
+            </div>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onChatToggle}
             className="relative"
           >
@@ -56,6 +85,11 @@ export function TopBar({ campaign, onChatToggle }: TopBarProps) {
           </Button>
         </div>
       </div>
+
+      <ZaloSettingsDialog
+        open={zaloSettingsOpen}
+        onClose={() => setZaloSettingsOpen(false)}
+      />
     </header>
   );
 }

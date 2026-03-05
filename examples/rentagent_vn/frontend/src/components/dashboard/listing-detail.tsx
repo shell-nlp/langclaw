@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   Phone,
@@ -10,6 +10,7 @@ import {
   Maximize2,
   X,
   MessageCircle,
+  Send,
 } from "lucide-react";
 import {
   Sheet,
@@ -30,8 +31,11 @@ import {
 } from "@/components/ui/select";
 import { useListingStore } from "@/stores/listing-store";
 import { SkipDialog } from "./skip-dialog";
-import { PIPELINE_STAGES } from "@/types";
-import type { Listing, PipelineStage } from "@/types";
+import { OutreachDialog } from "./outreach-dialog";
+import { ZaloSettingsDialog } from "@/components/zalo/zalo-settings-dialog";
+import { PIPELINE_STAGES, OUTREACH_STATUS_LABELS } from "@/types";
+import type { Listing, PipelineStage, OutreachMessage } from "@/types";
+import * as api from "@/lib/api";
 
 interface ListingDetailProps {
   listing: Listing;
@@ -44,10 +48,20 @@ export function ListingDetail({
   campaignId,
   onClose,
 }: ListingDetailProps) {
-  const { updateStage, updateNotes } = useListingStore();
+  const { updateStage, updateNotes, fetchListings } = useListingStore();
   const [notes, setNotes] = useState(listing.user_notes || "");
   const [skipOpen, setSkipOpen] = useState(false);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [zaloSettingsOpen, setZaloSettingsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [outreachHistory, setOutreachHistory] = useState<OutreachMessage[]>([]);
+
+  useEffect(() => {
+    api.getOutreachHistory(campaignId, listing.id).then(setOutreachHistory).catch(() => {});
+  }, [campaignId, listing.id]);
+
+  const latestOutreach = outreachHistory[0];
+  const outreachStatus = latestOutreach?.status;
 
   const handleStageChange = async (stage: PipelineStage) => {
     if (stage === "skipped") {
@@ -153,11 +167,32 @@ export function ListingDetail({
 
             {/* Landlord contact */}
             <div>
-              <p className="text-sm font-medium mb-2">Liên hệ</p>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">Liên hệ</p>
+                {outreachStatus && (
+                  <Badge
+                    variant={outreachStatus === "sent" || outreachStatus === "replied" ? "default" : "secondary"}
+                    className="text-xs"
+                  >
+                    {OUTREACH_STATUS_LABELS[outreachStatus]}
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-3">
                 {listing.landlord_name && (
                   <p className="text-sm">{listing.landlord_name}</p>
                 )}
+
+                {listing.landlord_phone && (
+                  <Button
+                    onClick={() => setOutreachOpen(true)}
+                    className="w-full"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Liên hệ chủ nhà
+                  </Button>
+                )}
+
                 <div className="flex gap-2">
                   {listing.landlord_phone && (
                     <>
@@ -280,6 +315,23 @@ export function ListingDetail({
           await updateStage(campaignId, listing.id, "skipped", reason);
           setSkipOpen(false);
         }}
+      />
+
+      <OutreachDialog
+        open={outreachOpen}
+        onClose={() => setOutreachOpen(false)}
+        listing={listing}
+        campaignId={campaignId}
+        onZaloSettingsOpen={() => setZaloSettingsOpen(true)}
+        onSuccess={() => {
+          api.getOutreachHistory(campaignId, listing.id).then(setOutreachHistory).catch(() => {});
+          fetchListings(campaignId);
+        }}
+      />
+
+      <ZaloSettingsDialog
+        open={zaloSettingsOpen}
+        onClose={() => setZaloSettingsOpen(false)}
       />
     </>
   );
