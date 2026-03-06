@@ -175,7 +175,7 @@ async def main() -> None:
         await init_db()
 
         # Import the app module to access its components
-        from examples.rentagent_vn import appx as app_module
+        from examples.rentagent_vn import app as app_module
 
         # Build and register the scan trigger
         trigger = await _build_scan_trigger(app_module)

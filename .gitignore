@@ -47,3 +47,6 @@ logs/
 # SQLite temp files
 *.db-shm
 *.db-wal
+
+# Secret
+tisu.py

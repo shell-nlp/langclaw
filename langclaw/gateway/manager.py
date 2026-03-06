@@ -126,6 +126,7 @@ class GatewayManager:
         return create_claw_agent(
             self._config,
             checkpointer=self._checkpointer_backend.get(),
+            cron_manager=self._cron_manager,
             extra_tools=spec.get("tools"),
             system_prompt=spec.get("system_prompt"),
             model=spec.get("model"),
