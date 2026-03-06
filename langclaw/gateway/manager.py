@@ -141,7 +141,7 @@ class GatewayManager:
 
         async def _cmd_switch(ctx: CommandContext) -> str:
             if not ctx.args:
-                current = await sessions.get_mode(ctx.channel, ctx.user_id)
+                current = await sessions.get_active_agent(ctx.channel, ctx.user_id)
                 lines = ["Available agents:"]
                 for name in agent_map:
                     desc = agent_descriptions.get(name, "")
@@ -158,7 +158,7 @@ class GatewayManager:
                     f"Available: {available or '(none registered)'}. "
                     f"Use /switch default to return to the main agent."
                 )
-            await sessions.set_mode(ctx.channel, ctx.user_id, target)
+            await sessions.set_active_agent(ctx.channel, ctx.user_id, target)
             if target == "default":
                 return "Switched back to the main agent."
             return f"Switched to agent '{target}'."
@@ -169,9 +169,11 @@ class GatewayManager:
         """Determine which named agent should handle this message.
 
         Resolution order:
-          1. Phase 2 ``agent_resolver`` hook — not yet implemented.
-          2. Stored user mode from :meth:`SessionManager.get_mode`.
-          3. Falls back to ``"default"``.
+          1. ``agent_name`` in message metadata — stamped at cron schedule time,
+             deterministic and restart-safe.
+          2. Phase 2 ``agent_resolver`` hook — not yet implemented.
+          3. Active agent from :meth:`SessionManager.get_active_agent` (set by ``/switch``).
+          4. Falls back to ``"default"``.
 
         Args:
             msg: The inbound message being handled.
@@ -179,14 +181,20 @@ class GatewayManager:
         Returns:
             Agent name string — always a key present in ``self._agent_map``.
         """
+        # 1. Explicit agent_name in metadata — stamped at cron schedule time.
+        agent_name_meta = (msg.metadata or {}).get("agent_name")
+        if agent_name_meta and agent_name_meta in self._agent_map:
+            return agent_name_meta
+
         # Phase 2 hook (uncomment and wire when implementing auto-routing):
         # if self._agent_resolver is not None:
         #     resolved = await self._agent_resolver(msg)
         #     if resolved is not None and resolved in self._agent_map:
         #         return resolved
 
-        mode = await self._sessions.get_mode(msg.channel, msg.user_id)
-        return mode if mode in self._agent_map else "default"
+        # 2. Stored user agent name from /switch command.
+        agent_name = await self._sessions.get_active_agent(msg.channel, msg.user_id)
+        return agent_name if agent_name in self._agent_map else "default"
 
     async def run(self) -> None:
         """

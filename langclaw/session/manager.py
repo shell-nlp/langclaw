@@ -33,7 +33,7 @@ class SessionManager:
 
     def __init__(self) -> None:
         self._store: dict[str, str] = {}
-        self._mode_store: dict[str, str] = {}
+        self._active_agent_store: dict[str, str] = {}
         self._lock = asyncio.Lock()
 
     async def get_or_create_thread(
@@ -98,7 +98,7 @@ class SessionManager:
         logger.info(f"Current thread_id: {thread_id} for {channel}:{user_id}:{context_id}")
         return self.make_runnable_config(thread_id, channel_context)
 
-    async def get_mode(self, channel: str, user_id: str) -> str:
+    async def get_active_agent(self, channel: str, user_id: str) -> str:
         """Return the active agent name for this (channel, user_id) pair.
 
         Returns:
@@ -106,9 +106,9 @@ class SessionManager:
         """
         key = f"{channel}:{user_id}"
         async with self._lock:
-            return self._mode_store.get(key, "default")
+            return self._active_agent_store.get(key, "default")
 
-    async def set_mode(self, channel: str, user_id: str, agent_name: str) -> None:
+    async def set_active_agent(self, channel: str, user_id: str, agent_name: str) -> None:
         """Persist the active agent name for this (channel, user_id) pair.
 
         Passing ``"default"`` removes the entry, keeping the store clean.
@@ -121,9 +121,9 @@ class SessionManager:
         key = f"{channel}:{user_id}"
         async with self._lock:
             if agent_name == "default":
-                self._mode_store.pop(key, None)
+                self._active_agent_store.pop(key, None)
             else:
-                self._mode_store[key] = agent_name
+                self._active_agent_store[key] = agent_name
 
     def all_threads(self) -> dict[str, str]:
         """Return a snapshot of all key→thread_id mappings (for diagnostics)."""
