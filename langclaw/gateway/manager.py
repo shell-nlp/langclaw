@@ -95,7 +95,7 @@ class GatewayManager:
         if named_agent_specs:
             for spec_name, spec in named_agent_specs.items():
                 self._agent_descriptions[spec_name] = spec.get("description", "")
-                self._agent_map[spec_name] = self._build_named_agent(spec)
+                self._agent_map[spec_name] = self._build_named_agent(spec, spec_name)
 
         # Register /switch only when named agents exist (no-op otherwise).
         if named_agent_specs:
@@ -104,15 +104,19 @@ class GatewayManager:
         # Phase 2 hook point — auto-routing resolver (not yet wired):
         # self._agent_resolver: Callable[[InboundMessage], Awaitable[str | None]] | None = None
 
-    def _build_named_agent(self, spec: dict[str, Any]) -> CompiledStateGraph:
+    def _build_named_agent(self, spec: dict[str, Any], agent_name: str) -> CompiledStateGraph:
         """Build a compiled agent from a named-agent spec.
 
         Shares the same checkpointer backend as the main agent — threads are
         isolated by ``thread_id``, which is determined by ``context_id``.
+        Each named agent gets its own workspace at
+        ``config.agents.workspace_dir / agent_name``.
 
         Args:
-            spec: Named agent spec with keys ``system_prompt``, ``tools``,
-                  ``model``.
+            spec:       Named agent spec with keys ``system_prompt``, ``tools``,
+                        ``model``.
+            agent_name: Registered name of the agent, used to derive its
+                        isolated workspace directory.
 
         Returns:
             A compiled LangGraph runnable.
@@ -126,6 +130,7 @@ class GatewayManager:
             system_prompt=spec.get("system_prompt"),
             model=spec.get("model"),
             context_schema=self._context_schema,
+            agent_name=agent_name,
         )
 
     def _setup_switch_command(self) -> None:

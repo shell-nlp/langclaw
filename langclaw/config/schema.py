@@ -154,6 +154,7 @@ class ChannelsConfig(BaseModel):
 
 class AgentConfig(BaseModel):
     model: str = "anthropic:claude-sonnet-4-5-20250929"
+    model_kwargs: dict[str, Any] = Field(default_factory=dict)
     rate_limit_rpm: int = 60
     banned_keywords: StringList = Field(default_factory=list)
     extra_skills: StringList = Field(default_factory=list)

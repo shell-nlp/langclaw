@@ -12,6 +12,11 @@ from langclaw import Langclaw
 
 app = Langclaw(system_prompt=SYSTEM_PROMPT, context_schema=RentAgentContext)
 app.register_tools([search_rentals, contact_landlord, research_area])
+app.agent(
+    "buddy",
+    description="A buddy who help me with my daily tasks",
+    system_prompt="You are a buddy who help me with my daily tasks",
+)
 
 tinyfish_client = TinyFishClient(timeout=5000)
 

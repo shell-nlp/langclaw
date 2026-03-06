@@ -164,6 +164,7 @@ def create_claw_agent(
     bus: BaseMessageBus | None = None,
     model: BaseChatModel | None = None,
     context_schema: type[LangclawContext] | None = None,
+    agent_name: str | None = None,
 ) -> CompiledStateGraph:
     """
     Create a langclaw deep agent backed by ``deepagents.create_deep_agent``.
@@ -204,6 +205,12 @@ def create_claw_agent(
         model:           Pre-built chat model. If omitted, resolved from config.
         context_schema:  Custom context schema to use for the agent. If omitted,
                          uses the default LangclawContext.
+        agent_name:      Name of the named agent being built.  When provided,
+                         the agent's workspace is scoped to
+                         ``config.agents.workspace_dir / agent_name`` so each
+                         agent has isolated skills, AGENTS.md, and memories.
+                         ``None`` (default) keeps the global workspace used by
+                         the default agent.
     Returns:
         A compiled LangGraph runnable (CompiledGraph) ready for ``.invoke``
         / ``.astream``.
@@ -214,10 +221,17 @@ def create_claw_agent(
     except ImportError as exc:
         raise ImportError("deepagents is required. Install with: uv add deepagents") from exc
 
-    resolved_model = model or init_chat_model(config.agents.model)
+    # Per-agent workspace: named agents get an isolated subdirectory;
+    # the default agent keeps the global workspace.
+    workspace_dir = (
+        config.agents.workspace_dir / agent_name if agent_name else config.agents.workspace_dir
+    )
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+
+    resolved_model = model or init_chat_model(config.agents.model, **config.agents.model_kwargs)
 
     skills = [config.agents.skills_source] + [
-        to_virtual_path(s, config.agents.workspace_dir) for s in (extra_skills or [])
+        to_virtual_path(s, workspace_dir) for s in (extra_skills or [])
     ]
 
     # Build all available built-in tools first.
@@ -246,7 +260,10 @@ def create_claw_agent(
     else:
         tools = builtin_tools + extra_tool_objects
 
-    base_prompt = config.agents.agents_md_file.read_text("utf-8")
+    agents_md = workspace_dir / "AGENTS.md"
+    if not agents_md.exists():
+        agents_md = config.agents.agents_md_file  # fall back to global
+    base_prompt = agents_md.read_text("utf-8") if agents_md.exists() else ""
     if system_prompt:
         system_prompt = f"{base_prompt}\n\n{system_prompt}"
     else:
@@ -279,7 +296,7 @@ def create_claw_agent(
                 detector=r"^[a-zA-Z0-9]{84}$",
                 strategy="redact",
                 apply_to_output=True,
-                apply_to_tool_results=True,
+                # apply_to_tool_results=True,
             ),
             *(extra_middleware or []),
         ]
@@ -340,7 +357,7 @@ def create_claw_agent(
         system_prompt=system_prompt,
         checkpointer=checkpointer,
         backend=FilesystemBackend(
-            root_dir=str(config.agents.workspace_dir),
+            root_dir=str(workspace_dir),
             virtual_mode=True,
         ),
         middleware=middleware,
