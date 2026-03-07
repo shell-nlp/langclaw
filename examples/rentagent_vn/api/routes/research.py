@@ -110,20 +110,8 @@ async def list_research(
     return await queries.list_research(campaign_id, status=status)
 
 
-@router.get(
-    "/campaigns/{campaign_id}/research/{research_id}",
-    response_model=AreaResearchResponse,
-)
-async def get_research(campaign_id: str, research_id: str) -> Any:
-    """Get a single area research record."""
-    research = await queries.get_area_research(research_id)
-    if not research or research.get("campaign_id") != campaign_id:
-        raise HTTPException(404, "Research not found")
-    return research
-
-
 # ---------------------------------------------------------------------------
-# SSE stream
+# SSE stream — MUST be defined before /{research_id} to avoid path capture
 # ---------------------------------------------------------------------------
 
 
@@ -145,8 +133,6 @@ async def stream_research_events(campaign_id: str) -> StreamingResponse:
             }
             yield f"data: {json.dumps(data)}\n\n"
 
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -156,6 +142,23 @@ async def stream_research_events(campaign_id: str) -> StreamingResponse:
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Get single research (after /stream to avoid path param capture)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/campaigns/{campaign_id}/research/{research_id}",
+    response_model=AreaResearchResponse,
+)
+async def get_research(campaign_id: str, research_id: str) -> Any:
+    """Get a single area research record."""
+    research = await queries.get_area_research(research_id)
+    if not research or research.get("campaign_id") != campaign_id:
+        raise HTTPException(404, "Research not found")
+    return research
 
 
 # ---------------------------------------------------------------------------
