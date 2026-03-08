@@ -43,11 +43,3 @@ Thumbs.db
 # Logs
 *.log
 logs/
-
-# SQLite temp files
-*.db-shm
-*.db-wal
-
-# Secret
-tisu.py
-examples/photography/*
