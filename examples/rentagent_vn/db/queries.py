@@ -42,7 +42,7 @@ def _compute_fingerprint(listing: dict[str, Any]) -> str:
 
 
 async def create_campaign(
-    name: str = "Chiến dịch mới",
+    name: str = "New Campaign",
     preferences: dict[str, Any] | None = None,
     sources: list[str] | None = None,
     scan_frequency: str = "manual",

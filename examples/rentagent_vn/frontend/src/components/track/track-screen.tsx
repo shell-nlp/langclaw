@@ -41,10 +41,10 @@ export function TrackScreen({ campaignId }: TrackScreenProps) {
           className="text-[22px] font-extrabold"
           style={{ color: "var(--ink)", letterSpacing: "-0.8px" }}
         >
-          Đang theo dõi
+          Tracking
         </h1>
         <p className="text-[13px] mt-0.5" style={{ color: "var(--ink-50)" }}>
-          {total} căn đang trong quá trình
+          {total} listings in progress
         </p>
       </div>
 
@@ -56,28 +56,28 @@ export function TrackScreen({ campaignId }: TrackScreenProps) {
         {total === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-[15px] font-medium" style={{ color: "var(--ink-30)" }}>
-              Chưa có căn nào đang theo dõi
+              No listings being tracked
             </p>
             <p className="text-[13px] mt-1" style={{ color: "var(--ink-30)" }}>
-              Vuốt phải để thêm căn vào danh sách
+              Swipe right to add listings to your list
             </p>
           </div>
         ) : (
           <>
             <TrackSection
-              title="Đang xem xét"
+              title="Researching"
               dotColor="var(--amber)"
               listings={researching}
               campaignId={campaignId}
             />
             <TrackSection
-              title="Đã liên hệ"
+              title="Contacted"
               dotColor="var(--terra)"
               listings={contacted}
               campaignId={campaignId}
             />
             <TrackSection
-              title="Xong"
+              title="Done"
               dotColor="var(--ink-30)"
               listings={done}
               collapsedByDefault={done.length > 0}

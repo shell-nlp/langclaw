@@ -17,9 +17,9 @@ import { SettingsScreen } from "@/components/settings/settings-screen";
 type Tab = "discover" | "track" | "settings";
 
 const TABS: { key: Tab; icon: typeof Heart; label: string }[] = [
-  { key: "discover", icon: Heart, label: "Khám phá" },
-  { key: "track", icon: LayoutGrid, label: "Theo dõi" },
-  { key: "settings", icon: Settings, label: "Cài đặt" },
+  { key: "discover", icon: Heart, label: "Discover" },
+  { key: "track", icon: LayoutGrid, label: "Track" },
+  { key: "settings", icon: Settings, label: "Settings" },
 ];
 
 interface AppProps {
@@ -67,7 +67,7 @@ export function App({ campaignId }: AppProps) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--cream)" }}>
         <div className="animate-pulse" style={{ color: "var(--ink-50)" }}>
-          Đang tải...
+          Loading...
         </div>
       </div>
     );

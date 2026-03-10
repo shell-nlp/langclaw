@@ -84,13 +84,13 @@ anything else). Use ONLY the exact field names shown below.
 Example (one listing):
 
 {"listings": [{
-  "title": "2PN ban công · Q7 · 12tr/tháng",
-  "description": "Căn hộ 2 phòng ngủ, 1 WC, có ban công thoáng mát, full nội thất, gần Lotte Mart",
+  "title": "2BR with balcony · District 7 · 12M/month",
+  "description": "2 bedroom apartment, 1 bathroom, spacious balcony",
   "price_vnd": 12000000.0,
-  "price_display": "12 triệu/tháng",
+  "price_display": "12M/month",
   "deposit_vnd": 24000000.0,
-  "address": "123 Nguyễn Hữu Thọ, Quận 7, TP.HCM",
-  "district": "Quan 7",
+  "address": "123 Nguyen Huu Tho, District 7, HCMC",
+  "district": "District 7",
   "city": "Ho Chi Minh",
   "area_sqm": 65.0,
   "bedrooms": 2,
@@ -99,7 +99,7 @@ Example (one listing):
   "thumbnail_url": "https://example.com/img.jpg",
   "posted_date": "2026-02-28",
   "source_platform": "nhatot.com",
-  "landlord_name": "Anh Minh",
+  "landlord_name": "Mr. Minh",
   "landlord_phone": "0901234567",
   "landlord_zalo": "0901234567",
   "landlord_facebook_url": "https://www.facebook.com/profile.php?id=100001234567",
@@ -107,11 +107,11 @@ Example (one listing):
 }]}
 
 Field guide (use these EXACT keys):
-- title          : Short headline — room type · district · price (e.g. "Studio · Bình Thạnh · 4tr")
+- title          : Short headline — room type · district · price (e.g. "Studio · Binh Thanh · 4M")
 - description    : 1-2 sentence summary (size, furniture, notable features)
 - price_vnd      : Monthly rent as float. Convert shorthand: 5tr = 5000000.0,
-   15 triệu = 15000000.0. null if unknown
-- price_display  : Price as written in the post (e.g. "5tr/tháng")
+   15 trieu = 15000000.0. null if unknown
+- price_display  : Price as written in the post (e.g. "5M/month")
 - deposit_vnd    : Deposit as float. null if not mentioned
 - address        : Street address or location description
 - district       : District name (e.g. "Binh Thanh", "Quan 7")
@@ -131,7 +131,7 @@ Field guide (use these EXACT keys):
 
 CRITICAL RULES:
 - If a value is unknown or not mentioned, set it to null. NEVER use \
-placeholder text like "Không đề cập", "Chưa rõ", "N/A", or "Liên hệ".
+placeholder text like "Not mentioned", "Unknown", "N/A", or "Contact".
 - Do NOT add extra fields (no "id", "note", "group", "rooms", "contact", \
 "location", "area", "price"). Use ONLY the field names listed above.
 - Return valid JSON only."""
@@ -162,8 +162,8 @@ memes, and non-rental content), extract the listing details from the post text.
 - Do NOT add extra fields not listed in the schema below.
 
 ## Edge cases
-- If a post mentions price in shorthand (e.g. "5tr", "5 triệu"), convert: \
-5tr = 5000000.0 for price_vnd, keep "5tr/tháng" for price_display.
+- If a post mentions price in shorthand (e.g. "5tr", "5M"), convert: \
+5tr = 5000000.0 for price_vnd, keep "5M/month" for price_display.
 - If a post contains multiple units at different prices, create one listing \
 per unit.
 - "1PN" means bedrooms=1, "2PN" means bedrooms=2, "Studio" means bedrooms=0.
@@ -265,9 +265,9 @@ Your goal is to write a natural, concise Zalo message to a landlord or agent.
 {custom_notes_section}
 
 ## Message Examples (for style reference ONLY - do not copy verbatim):
-- "hello, em thấy tin phòng ở {district} giá {price}. Còn phòng không ạ?"
-- "chào anh, em quan tâm căn hộ {address}. Chiều nay em qua xem được không?"
-- "chị ơi, phòng {area} {district} còn cho thuê không? Cho em xin lịch xem nhé."
+- "Hi, I saw the room listing in {district} for {price}. Is it still available?"
+- "Hello, I'm interested in the apartment at {address}. Can I come see it this afternoon?"
+- "Hi, is the {area} room in {district} still for rent? When can I schedule a viewing?"
 
 Return ONLY the message text, with no extra explanation or markdown formatting."""
 
@@ -399,21 +399,21 @@ neighbourhood's suitability for living.
 Return ONLY a JSON object matching this EXACT structure:
 
 {{"overall": 8.2,
-  "verdict": "Lựa chọn tốt cho gia đình, hẻm yên tĩnh...",
+  "verdict": "Good choice for families, quiet alley...",
   "criteria": [
     {{
       "criterion_key": "food_shopping",
       "score": 9,
-      "label": "Ăn uống & Mua sắm",
-      "highlights": ["Mật độ quán ăn cao", "Có cửa hàng thực phẩm sạch"],
+      "label": "Food & Shopping",
+      "highlights": ["High density of restaurants", "Fresh food store available"],
       "details": [{{"key": "dining", "value": "..."}}, {{"key": "grocery", "value": "..."}}],
       "walking_distance": true
     }},
     {{
       "criterion_key": "healthcare",
       "score": 7,
-      "label": "Y tế",
-      "highlights": ["Phòng khám gần", "Nhà thuốc 24/7"],
+      "label": "Healthcare",
+      "highlights": ["Clinic nearby", "24/7 pharmacy"],
       "details": [{{"key": "hospital", "value": "..."}}, {{"key": "pharmacy", "value": "..."}}],
       "walking_distance": false
     }}

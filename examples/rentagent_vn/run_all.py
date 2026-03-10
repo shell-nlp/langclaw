@@ -49,12 +49,12 @@ async def _build_scan_trigger(app_module: Any) -> Any:
             if prefs.get("district"):
                 parts.append(prefs["district"])
             if prefs.get("bedrooms"):
-                parts.append(f"{prefs['bedrooms']} phòng ngủ")
+                parts.append(f"{prefs['bedrooms']} bedrooms")
             if prefs.get("max_price"):
-                parts.append(f"dưới {prefs['max_price']}")
+                parts.append(f"under {prefs['max_price']}")
             if prefs.get("property_type"):
                 parts.append(prefs["property_type"])
-            query = ", ".join(parts) if parts else "phòng trọ cho thuê"
+            query = ", ".join(parts) if parts else "apartment for rent"
 
         # Create scan record in DB
         runner = app_module.scrape_runner
@@ -66,7 +66,7 @@ async def _build_scan_trigger(app_module: Any) -> Any:
         await queries.add_activity(
             campaign_id,
             "scan_start",
-            f"Bắt đầu quét {len(sources)} nguồn...",
+            f"Starting scan on {len(sources)} sources...",
             scan_id=scan_id,
         )
 

@@ -35,7 +35,7 @@ export default function Home() {
             className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto"
             style={{ borderColor: "var(--terra)", borderTopColor: "transparent" }}
           />
-          <p className="text-sm" style={{ color: "var(--ink-50)" }}>Đang tải...</p>
+          <p className="text-sm" style={{ color: "var(--ink-50)" }}>Loading...</p>
         </div>
       </div>
     );

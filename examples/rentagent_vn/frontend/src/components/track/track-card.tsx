@@ -22,7 +22,7 @@ function ResearchBadge({ listing }: { listing: Listing }) {
         className="px-2 py-0.5 text-[11px] font-semibold rounded-full"
         style={{ background: "var(--terra-15)", color: "var(--terra)" }}
       >
-        Đã liên hệ
+        Contacted
       </div>
     );
   }
@@ -34,7 +34,7 @@ function ResearchBadge({ listing }: { listing: Listing }) {
           className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full"
           style={{ background: "var(--amber-15)", color: "var(--amber)" }}
         >
-          <span className="pulse-dot">●</span> Khảo sát
+          <span className="pulse-dot">●</span> Researching
         </div>
       );
     }
@@ -47,7 +47,7 @@ function ResearchBadge({ listing }: { listing: Listing }) {
         className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full"
         style={{ background: "var(--amber-15)", color: "var(--amber)" }}
       >
-        <span className="pulse-dot">●</span> Khảo sát
+        <span className="pulse-dot">●</span> Researching
       </div>
     );
   }
@@ -69,7 +69,7 @@ function ResearchBadge({ listing }: { listing: Listing }) {
         className="px-2 py-0.5 text-[11px] font-semibold rounded-full"
         style={{ background: "#fde8e8", color: "#cc0033" }}
       >
-        Lỗi
+        Error
       </div>
     );
   }
@@ -80,11 +80,11 @@ function ResearchBadge({ listing }: { listing: Listing }) {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "Vừa xong";
-  if (mins < 60) return `${mins} phút trước`;
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} giờ trước`;
-  return `${Math.floor(hrs / 24)} ngày trước`;
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 export function TrackCard({ listing, campaignId }: TrackCardProps) {
@@ -102,7 +102,7 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
   };
 
   // Use <div role="button"> instead of <button> to avoid nested button violation
-  // (the "Xem trực tiếp →" inside is a real <button>)
+  // (the "Watch live →" inside is a real <button>)
   return (
     <>
       <div
@@ -139,13 +139,13 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
             className="text-[13px] font-semibold truncate"
             style={{ color: "var(--ink)" }}
           >
-            {listing.title || listing.address || "Căn hộ"}
+            {listing.title || listing.address || "Apartment"}
           </div>
           <div
             className="text-[13px] font-bold"
             style={{ color: "var(--terra)" }}
           >
-            {listing.price_display || "Liên hệ"}
+            {listing.price_display || "Contact"}
           </div>
           <div className="flex gap-1.5 flex-wrap">
             {listing.bedrooms !== null && (
@@ -153,7 +153,7 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
                 className="text-[11px] px-1.5 py-0.5 rounded"
                 style={{ background: "var(--ink-04)", color: "var(--ink-50)" }}
               >
-                {listing.bedrooms}PN
+                {listing.bedrooms}BR
               </span>
             )}
             {listing.area_sqm !== null && (
@@ -188,7 +188,7 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
               className="text-[11px] font-medium"
               style={{ color: "var(--terra)" }}
             >
-              Xem trực tiếp →
+              Watch live →
             </button>
           )}
 

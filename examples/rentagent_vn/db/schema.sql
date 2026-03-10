@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY DEFAULT (hex(randomblob(6))),
-  name TEXT NOT NULL DEFAULT 'Chiến dịch mới',
+  name TEXT NOT NULL DEFAULT 'New Campaign',
   preferences_json TEXT NOT NULL DEFAULT '{}',
   sources_json TEXT NOT NULL DEFAULT '[]',
   scan_frequency TEXT NOT NULL DEFAULT 'manual',

@@ -30,11 +30,11 @@ export function ActionBar({ onSkip, onLike, onContact }: ActionBarProps) {
           <X size={22} style={{ color: "var(--ink-50)" }} />
         </button>
         <span className="text-[11px] font-medium" style={{ color: "var(--ink-30)" }}>
-          Bỏ qua
+          Skip
         </span>
       </div>
 
-      {/* Like / Xem thêm */}
+      {/* Like / Like */}
       <div className="flex flex-col items-center gap-1.5">
         <button
           onClick={onLike}
@@ -49,11 +49,11 @@ export function ActionBar({ onSkip, onLike, onContact }: ActionBarProps) {
           <Heart size={26} fill="white" color="white" />
         </button>
         <span className="text-[11px] font-medium" style={{ color: "var(--terra)" }}>
-          Xem thêm
+          Like
         </span>
       </div>
 
-      {/* Contact / Liên hệ luôn */}
+      {/* Contact / Contact now */}
       <div className="flex flex-col items-center gap-1.5">
         <button
           onClick={onContact}
@@ -69,7 +69,7 @@ export function ActionBar({ onSkip, onLike, onContact }: ActionBarProps) {
           <Zap size={18} style={{ color: "var(--ink-50)" }} />
         </button>
         <span className="text-[11px] font-medium" style={{ color: "var(--ink-30)" }}>
-          Liên hệ luôn
+          Contact now
         </span>
       </div>
     </div>

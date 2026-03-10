@@ -21,33 +21,33 @@ const PREF_FIELDS: {
   placeholder: string;
   type?: string;
 }[] = [
-  { key: "district", label: "Khu vực", placeholder: "VD: Quận 7, Bình Thạnh" },
-  { key: "property_type", label: "Loại hình", placeholder: "VD: Căn hộ, phòng trọ, studio" },
+  { key: "district", label: "Area", placeholder: "e.g. District 7, Binh Thanh" },
+  { key: "property_type", label: "Property type", placeholder: "e.g. Apartment, room, studio" },
   {
     key: "bedrooms",
-    label: "Số phòng ngủ",
-    placeholder: "VD: 2",
+    label: "Bedrooms",
+    placeholder: "e.g. 2",
     type: "number",
   },
   {
     key: "min_price",
-    label: "Giá thấp nhất (VND)",
-    placeholder: "VD: 5000000",
+    label: "Min price (VND)",
+    placeholder: "e.g. 5000000",
     type: "number",
   },
   {
     key: "max_price",
-    label: "Giá cao nhất (VND)",
-    placeholder: "VD: 15000000",
+    label: "Max price (VND)",
+    placeholder: "e.g. 15000000",
     type: "number",
   },
   {
     key: "min_area",
-    label: "Diện tích tối thiểu (m²)",
-    placeholder: "VD: 30",
+    label: "Min area (m²)",
+    placeholder: "e.g. 30",
     type: "number",
   },
-  { key: "notes", label: "Ghi chú thêm", placeholder: "VD: Có ban công, gần trường học..." },
+  { key: "notes", label: "Additional notes", placeholder: "e.g. Has balcony, near school..." },
 ];
 
 export function ConfirmStep({
@@ -86,9 +86,9 @@ export function ConfirmStep({
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Xác nhận tiêu chí</h2>
+        <h2 className="text-lg font-semibold">Confirm criteria</h2>
         <p className="text-sm text-muted-foreground">
-          Kiểm tra và chỉnh sửa nếu cần. Bạn có thể thay đổi sau.
+          Review and edit if needed. You can change this later.
         </p>
       </div>
 
@@ -144,11 +144,11 @@ export function ConfirmStep({
       <div className="flex justify-between mt-6">
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Quay lại
+          Back
         </Button>
         <Button onClick={() => onConfirm(prefs)}>
           <Check className="h-4 w-4 mr-1" />
-          Xác nhận
+          Confirm
         </Button>
       </div>
     </Card>

@@ -61,7 +61,7 @@ function ConnectionRow({
             color: connected ? "var(--jade)" : "var(--ink-30)",
           }}
         >
-          {connected ? "Đã kết nối" : "Chưa kết nối"}
+          {connected ? "Connected" : "Not connected"}
         </span>
         <ChevronRight size={14} style={{ color: "var(--ink-30)" }} />
       </div>
@@ -91,7 +91,7 @@ export function ConnectionsSection() {
         iconBg="#e6f4ec"
         emoji="💬"
         label="Zalo"
-        sub="Nhắn tin và nhận thông báo"
+        sub="Messaging and notifications"
         connected={zaloConnected}
         onClick={() => {
           // TODO: open ZaloSettingsDialog — wire in Phase 2 or reuse existing component
@@ -102,7 +102,7 @@ export function ConnectionsSection() {
         iconBg="#e8edf8"
         emoji="📘"
         label="Facebook"
-        sub="Quét tin từ các nhóm cho thuê"
+        sub="Scan listings from rental groups"
         connected={false}
         onClick={() => {}}
       />
@@ -111,7 +111,7 @@ export function ConnectionsSection() {
         iconBg="#f5ece8"
         emoji="🏠"
         label="BDS.com.vn"
-        sub="Nguồn tin chính"
+        sub="Primary listing source"
         connected={true}
         onClick={() => {}}
       />

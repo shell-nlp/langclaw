@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 
 class CreateCampaignRequest(BaseModel):
-    name: str = "Chiến dịch mới"
+    name: str = "New Campaign"
     preferences: dict[str, Any] = Field(default_factory=dict)
     sources: list[str] = Field(default_factory=list)
     scan_frequency: str = "manual"

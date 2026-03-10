@@ -15,18 +15,18 @@ interface FrequencyStepProps {
 const FREQUENCIES = [
   {
     value: "manual",
-    label: "Thủ công",
-    description: "Quét khi bạn bấm nút. Phù hợp nếu không vội.",
+    label: "Manual",
+    description: "Scan when you press the button. Good if you're not in a hurry.",
   },
   {
     value: "1x_day",
-    label: "1 lần/ngày",
-    description: "Quét tự động mỗi sáng lúc 8:00.",
+    label: "Once daily",
+    description: "Auto-scan every morning at 8:00 AM.",
   },
   {
     value: "2x_day",
-    label: "2 lần/ngày",
-    description: "Quét lúc 8:00 và 18:00. Không bỏ lỡ tin mới.",
+    label: "Twice daily",
+    description: "Scan at 8:00 AM and 6:00 PM. Don't miss new listings.",
   },
 ];
 
@@ -42,9 +42,9 @@ export function FrequencyStep({ onConfirm, onBack }: FrequencyStepProps) {
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Tần suất quét</h2>
+        <h2 className="text-lg font-semibold">Scan frequency</h2>
         <p className="text-sm text-muted-foreground">
-          Chọn mức độ tự động tìm kiếm. Bạn luôn có thể quét thủ công.
+          Choose how often to auto-search. You can always scan manually.
         </p>
       </div>
 
@@ -76,15 +76,15 @@ export function FrequencyStep({ onConfirm, onBack }: FrequencyStepProps) {
       <div className="flex justify-between mt-6">
         <Button variant="ghost" onClick={onBack} disabled={loading}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Quay lại
+          Back
         </Button>
         <Button onClick={handleConfirm} disabled={loading}>
           {loading ? (
-            <span className="animate-pulse">Đang tạo...</span>
+            <span className="animate-pulse">Creating...</span>
           ) : (
             <>
               <Rocket className="h-4 w-4 mr-1" />
-              Bắt đầu
+              Start
             </>
           )}
         </Button>

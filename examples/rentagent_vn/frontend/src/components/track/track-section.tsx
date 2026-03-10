@@ -46,7 +46,7 @@ export function TrackSection({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[12px]" style={{ color: "var(--ink-30)" }}>
-            {listings.length} căn
+            {listings.length} listings
           </span>
           {collapsedByDefault &&
             (collapsed ? (

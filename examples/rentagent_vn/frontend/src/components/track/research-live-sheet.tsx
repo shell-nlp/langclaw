@@ -39,14 +39,14 @@ export function ResearchLiveSheet({
   }, [currentStep, currentDetail]);
 
   const listingName =
-    listing.title || listing.address || "Căn hộ này";
+    listing.title || listing.address || "This listing";
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
       title={listingName}
-      subtitle="Đang khảo sát khu vực"
+      subtitle="Researching area"
       maxHeight="90vh"
     >
       {/* iframe — 55% height of sheet */}
@@ -64,7 +64,7 @@ export function ResearchLiveSheet({
               {finalScore.toFixed(1)}
             </div>
             <div className="text-[16px] font-semibold" style={{ color: "var(--jade)" }}>
-              Khảo sát hoàn thành
+              Research complete
             </div>
             {research.verdict && (
               <p
@@ -92,7 +92,7 @@ export function ResearchLiveSheet({
               style={{ borderColor: "var(--amber)", borderTopColor: "transparent" }}
             />
             <p className="text-[13px]" style={{ color: "var(--ink-50)" }}>
-              Đang khởi động...
+              Starting up...
             </p>
           </div>
         )}
@@ -123,7 +123,7 @@ export function ResearchLiveSheet({
           </div>
         ) : (
           <p className="text-[12px]" style={{ color: "var(--ink-30)" }}>
-            {isDone ? "Hoàn thành." : "Đang chờ dữ liệu..."}
+            {isDone ? "Complete." : "Waiting for data..."}
           </p>
         )}
       </div>

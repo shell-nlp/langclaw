@@ -233,7 +233,7 @@ export function RentalCard({
           pointerEvents: "none",
         }}
       >
-        Thêm
+        Like
       </div>
       <div
         ref={skipRef}
@@ -247,7 +247,7 @@ export function RentalCard({
           pointerEvents: "none",
         }}
       >
-        Bỏ
+        Skip
       </div>
 
       {/* Card body — bottom */}
@@ -257,7 +257,7 @@ export function RentalCard({
           className="text-white mb-2"
           style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-1.2px" }}
         >
-          {listing.price_display || "Liên hệ"}
+          {listing.price_display || "Contact"}
         </div>
 
         {/* Specs chips */}
@@ -272,7 +272,7 @@ export function RentalCard({
               }}
             >
               <Bed size={13} />
-              {listing.bedrooms} PN
+              {listing.bedrooms} BR
             </div>
           )}
           {listing.area_sqm !== null && listing.area_sqm !== undefined && (

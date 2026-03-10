@@ -8,22 +8,62 @@ interface ScanLiveSheetProps {
   onClose: () => void;
 }
 
+function getTabLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return url.slice(0, 20);
+  }
+}
+
 export function ScanLiveSheet({ open, onClose }: ScanLiveSheetProps) {
-  const { activeUrl, streamingUrls, completedUrls, totalUrls, listingsFound } =
-    useScanStreamStore();
+  const {
+    activeUrl,
+    streamingUrls,
+    completedUrls,
+    totalUrls,
+    listingsFound,
+    setActiveUrl,
+  } = useScanStreamStore();
 
   const iframeUrl = activeUrl ? streamingUrls[activeUrl] : null;
+  const urlKeys = Object.keys(streamingUrls);
+  const hasMultipleTabs = urlKeys.length > 1;
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Đang tìm căn hộ..."
-      subtitle="Bot đang duyệt web để tìm tin phù hợp"
-      maxHeight="85vh"
+      title="Finding apartments..."
+      subtitle="Bot is browsing the web to find matching listings"
+      maxHeight="95vh"
     >
+      {/* Tab bar for multiple URLs */}
+      {hasMultipleTabs && (
+        <div
+          className="flex-shrink-0 flex gap-1.5 px-4 py-2 overflow-x-auto"
+          style={{ borderBottom: "1px solid var(--ink-04)" }}
+        >
+          {urlKeys.map((url) => (
+            <button
+              key={url}
+              onClick={() => setActiveUrl(url)}
+              className="px-3 py-1.5 rounded-full text-[12px] whitespace-nowrap transition-colors"
+              style={{
+                background:
+                  url === activeUrl ? "var(--amber)" : "var(--ink-08)",
+                color: url === activeUrl ? "white" : "var(--ink-70)",
+                fontWeight: url === activeUrl ? 600 : 400,
+              }}
+            >
+              {getTabLabel(url)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* iFrame area */}
-      <div className="flex-1 relative min-h-0" style={{ minHeight: 300 }}>
+      <div className="flex-1 relative min-h-0" style={{ minHeight: "60vh" }}>
         {iframeUrl ? (
           <iframe
             src={iframeUrl}
@@ -42,7 +82,7 @@ export function ScanLiveSheet({ open, onClose }: ScanLiveSheetProps) {
                 style={{ borderColor: "var(--amber)", borderTopColor: "transparent" }}
               />
               <p className="text-[13px]" style={{ color: "var(--ink-50)" }}>
-                Đang khởi động...
+                Starting up...
               </p>
             </div>
           </div>
@@ -55,13 +95,13 @@ export function ScanLiveSheet({ open, onClose }: ScanLiveSheetProps) {
         style={{ borderTop: "1px solid var(--ink-04)" }}
       >
         <span className="text-[12px]" style={{ color: "var(--ink-50)" }}>
-          {completedUrls}/{totalUrls || "..."} trang
+          {completedUrls}/{totalUrls || "..."} pages
         </span>
         <span
           className="text-[12px] font-semibold"
           style={{ color: "var(--terra)" }}
         >
-          {listingsFound} tin tìm thấy
+          {listingsFound} listings found
         </span>
       </div>
     </BottomSheet>

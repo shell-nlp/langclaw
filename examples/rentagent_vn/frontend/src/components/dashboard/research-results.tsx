@@ -54,8 +54,8 @@ export function ResearchResults({
   };
 
   const tabs = [
-    { key: "overview" as const, label: "Tổng quan" },
-    { key: "details" as const, label: "Chi tiết" },
+    { key: "overview" as const, label: "Overview" },
+    { key: "details" as const, label: "Details" },
     ...(research.street_view_urls.length > 0
       ? [{ key: "street" as const, label: "Street View" }]
       : []),
@@ -67,7 +67,7 @@ export function ResearchResults({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-teal-500" />
-          <span className="text-sm font-medium">Kết quả khảo sát</span>
+          <span className="text-sm font-medium">Research results</span>
         </div>
         {overall_score != null && <ScoreBadge score={overall_score} size="lg" />}
       </div>
@@ -99,7 +99,7 @@ export function ResearchResults({
               <Separator />
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Nhận xét
+                  Verdict
                 </p>
                 <p className="text-sm leading-relaxed">{verdict}</p>
               </div>
@@ -122,7 +122,7 @@ export function ResearchResults({
                       variant="outline"
                       className="text-[10px] h-4 px-1 text-green-600"
                     >
-                      Đi bộ
+                      Walking
                     </Badge>
                   )}
                 </div>
@@ -193,7 +193,7 @@ export function ResearchResults({
           onClick={() => handleMoveStage("contacted")}
         >
           <Send className="h-3.5 w-3.5 mr-1.5" />
-          Liên hệ ngay
+          Contact now
         </Button>
         <Button
           variant="outline"
@@ -201,7 +201,7 @@ export function ResearchResults({
           onClick={handleRetry}
         >
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Khảo sát lại
+          Research again
         </Button>
       </div>
     </div>

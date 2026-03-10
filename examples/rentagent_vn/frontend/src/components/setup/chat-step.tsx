@@ -23,7 +23,7 @@ const INITIAL_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "Chào bạn! Mình sẽ giúp bạn tìm phòng trọ. Bạn mô tả nhu cầu nhé — ví dụ: khu vực, số phòng ngủ, ngân sách, hoặc yêu cầu đặc biệt nào.",
+    "Hi there! I'll help you find a rental. Describe your needs — e.g. location, number of bedrooms, budget, or any special requirements.",
 };
 
 export function ChatStep({ onExtracted }: ChatStepProps) {
@@ -112,9 +112,9 @@ export function ChatStep({ onExtracted }: ChatStepProps) {
   return (
     <Card className="flex flex-col h-[500px]">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Bạn cần tìm phòng thế nào?</h2>
+        <h2 className="text-lg font-semibold">What are you looking for?</h2>
         <p className="text-sm text-muted-foreground">
-          Mô tả nhu cầu bằng tiếng Việt — mình sẽ hiểu và tóm tắt lại cho bạn.
+          Describe your needs — I'll understand and summarize them for you.
         </p>
       </div>
 
@@ -143,7 +143,7 @@ export function ChatStep({ onExtracted }: ChatStepProps) {
           {isTyping && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-                <span className="animate-pulse">Đang suy nghĩ...</span>
+                <span className="animate-pulse">Thinking...</span>
               </div>
             </div>
           )}
@@ -162,7 +162,7 @@ export function ChatStep({ onExtracted }: ChatStepProps) {
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="VD: Tìm phòng trọ Quận 7, 2PN, dưới 10 triệu..."
+            placeholder="e.g. Looking for a 2BR apartment in District 7, under 10 million..."
             disabled={isTyping}
           />
           <Button type="submit" size="icon" disabled={!input.trim() || isTyping}>
@@ -173,7 +173,7 @@ export function ChatStep({ onExtracted }: ChatStepProps) {
           onClick={handleSkipChat}
           className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          Bỏ qua, tự nhập tiêu chí
+          Skip, enter criteria manually
         </button>
       </div>
     </Card>

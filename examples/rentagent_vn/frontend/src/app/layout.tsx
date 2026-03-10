@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "RentAgent VN",
-  description: "Trợ lý tìm phòng trọ thông minh",
+  description: "Smart rental apartment assistant",
 };
 
 export const viewport: Viewport = {
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body className={`${inter.variable} antialiased font-[family-name:var(--font-inter)]`}>
         <TooltipProvider>
           {children}

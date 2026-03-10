@@ -43,11 +43,11 @@ export function SourcesStep({ onConfirm, onBack }: SourcesStepProps) {
 
     // Basic validation
     if (!url.startsWith("http")) {
-      setError("URL phải bắt đầu bằng http:// hoặc https://");
+      setError("URL must start with http:// or https://");
       return;
     }
     if (customUrls.includes(url)) {
-      setError("URL này đã được thêm rồi");
+      setError("This URL has already been added");
       return;
     }
 
@@ -74,16 +74,16 @@ export function SourcesStep({ onConfirm, onBack }: SourcesStepProps) {
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Chọn nguồn tìm kiếm</h2>
+        <h2 className="text-lg font-semibold">Select search sources</h2>
         <p className="text-sm text-muted-foreground">
-          Thêm link nhóm Facebook hoặc trang web cho thuê phòng.
+          Add Facebook group links or rental listing websites.
         </p>
       </div>
 
       {/* Default sources */}
       <div className="space-y-2 mb-6">
         <p className="text-sm font-medium text-muted-foreground">
-          Nguồn mặc định
+          Default sources
         </p>
         {defaults.map((source, i) => (
           <button
@@ -116,7 +116,7 @@ export function SourcesStep({ onConfirm, onBack }: SourcesStepProps) {
       {/* Custom URLs */}
       <div className="space-y-2 mb-6">
         <p className="text-sm font-medium text-muted-foreground">
-          Thêm nguồn khác (nhóm Facebook, diễn đàn...)
+          Add other sources (Facebook groups, forums...)
         </p>
         {customUrls.map((url) => (
           <div
@@ -160,11 +160,11 @@ export function SourcesStep({ onConfirm, onBack }: SourcesStepProps) {
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Quay lại
+          Back
         </Button>
         <Button onClick={handleConfirm} disabled={totalSources === 0}>
           <ArrowRight className="h-4 w-4 mr-1" />
-          Tiếp ({totalSources} nguồn)
+          Next ({totalSources} sources)
         </Button>
       </div>
     </Card>

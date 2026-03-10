@@ -50,7 +50,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
     if (scanStatus === "complete") {
       setScanSheetOpen(false);
       const count = useScanStreamStore.getState().listingsFound;
-      toast.success(`Quét xong · ${count} tin mới`, { icon: "✓" });
+      toast.success(`Scan complete · ${count} new listings`, { icon: "✓" });
       fetchListings(campaignId);
     }
   }, [scanStatus, campaignId, fetchListings]);
@@ -113,7 +113,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
           next.delete(listing.id);
           return next;
         });
-        toast.error("Có lỗi xảy ra, thử lại nhé");
+        toast.error("Something went wrong, please try again");
       }
     },
     [campaignId]
@@ -124,7 +124,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
       await triggerScan(campaignId);
       setScanSheetOpen(true);
     } catch {
-      toast.error("Không thể bắt đầu quét");
+      toast.error("Failed to start scan");
     }
   };
 
@@ -132,10 +132,10 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
   const prefs = campaign?.preferences;
   const pillParts: string[] = [];
   if (prefs?.district) pillParts.push(prefs.district);
-  if (prefs?.bedrooms) pillParts.push(`${prefs.bedrooms}PN`);
+  if (prefs?.bedrooms) pillParts.push(`${prefs.bedrooms}BR`);
   if (prefs?.max_price)
     pillParts.push(`≤ ${Math.round(prefs.max_price / 1_000_000)}tr`);
-  const pillText = pillParts.join(" · ") || "Tất cả";
+  const pillText = pillParts.join(" · ") || "All";
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--cream)" }}>
@@ -171,7 +171,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
                 borderRadius: "var(--r-full)",
               }}
             >
-              <span className="pulse-dot">●</span> Đang quét...
+              <span className="pulse-dot">●</span> Scanning...
             </button>
           ) : (
             <>
@@ -179,7 +179,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
                 className="px-2.5 py-1 text-[12px] font-semibold text-white"
                 style={{ background: "var(--terra)", borderRadius: "var(--r-full)" }}
               >
-                {newListings.length} mới
+                {newListings.length} new
               </div>
               {/* "Quét ngay" replaces filter icon — filter icon is Phase 2 */}
               <button
@@ -191,7 +191,7 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
                   borderRadius: "var(--r-full)",
                 }}
               >
-                Quét ngay
+                Scan now
               </button>
             </>
           )}

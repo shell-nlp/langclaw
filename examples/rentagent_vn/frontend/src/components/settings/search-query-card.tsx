@@ -8,9 +8,9 @@ export function SearchQueryCard() {
 
   const pills: string[] = [];
   if (prefs?.district) pills.push(prefs.district);
-  if (prefs?.bedrooms) pills.push(`${prefs.bedrooms}PN`);
+  if (prefs?.bedrooms) pills.push(`${prefs.bedrooms}BR`);
   if (prefs?.max_price)
-    pills.push(`≤ ${Math.round(prefs.max_price / 1_000_000)}tr`);
+    pills.push(`≤ ${Math.round(prefs.max_price / 1_000_000)}M`);
   if (prefs?.min_area) pills.push(`≥ ${prefs.min_area}m²`);
 
   return (
@@ -39,7 +39,7 @@ export function SearchQueryCard() {
           ))
         ) : (
           <span className="text-[13px]" style={{ color: "var(--ink-30)" }}>
-            Chưa có tiêu chí tìm kiếm
+            No search criteria set
           </span>
         )}
       </div>
@@ -49,7 +49,7 @@ export function SearchQueryCard() {
         style={{ color: "var(--terra)" }}
         onClick={() => {}}
       >
-        Sửa
+        Edit
       </button>
     </div>
   );

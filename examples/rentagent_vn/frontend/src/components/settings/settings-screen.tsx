@@ -20,29 +20,29 @@ export function SettingsScreen({ campaignId }: SettingsScreenProps) {
           className="text-[22px] font-extrabold"
           style={{ color: "var(--ink)", letterSpacing: "-0.8px" }}
         >
-          Cài đặt
+          Settings
         </h1>
       </div>
 
       <div className="px-5 space-y-6">
-        {/* Section: Tìm kiếm hiện tại */}
+        {/* Section: Current search */}
         <div>
           <p
             className="text-[11px] font-semibold uppercase mb-2 px-1"
             style={{ color: "var(--ink-30)", letterSpacing: "0.8px" }}
           >
-            Tìm kiếm hiện tại
+            Current search
           </p>
           <SearchQueryCard />
         </div>
 
-        {/* Section: Kết nối */}
+        {/* Section: Connections */}
         <div>
           <p
             className="text-[11px] font-semibold uppercase mb-2 px-1"
             style={{ color: "var(--ink-30)", letterSpacing: "0.8px" }}
           >
-            Kết nối
+            Connections
           </p>
           <ConnectionsSection />
         </div>

@@ -15,10 +15,10 @@ export function EmptyDiscover() {
         className="text-lg font-bold mb-2"
         style={{ color: "var(--ink)", letterSpacing: "-0.5px" }}
       >
-        Đã xem hết rồi!
+        All caught up!
       </h2>
       <p className="text-[13px]" style={{ color: "var(--ink-50)" }}>
-        Bot sẽ quét thêm tin mới cho bạn. Bạn sẽ nhận thông báo khi có tin mới.
+        The bot will scan for more listings. You'll be notified when new ones arrive.
       </p>
     </div>
   );

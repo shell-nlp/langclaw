@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   Heart,
@@ -125,11 +125,45 @@ export function ListingDetailSheet({
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [zaloSettingsOpen, setZaloSettingsOpen] = useState(false);
 
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    setNotes(listing.user_notes || "");
+    isInitialMount.current = true;
+  }, [listing.id]);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (notes !== (listing.user_notes || "")) {
+        await updateNotes(campaignId, listing.id, notes);
+      }
+    }, 2000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [notes, listing.user_notes, listing.id, campaignId, updateNotes]);
+
   const researchId = listing.research_id ?? researchByListing[listing.id];
   const research = researchId ? researching[researchId] : null;
   const overallScore = research?.overall_score ?? null;
 
   const handleNotesBlur = async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
     if (notes !== (listing.user_notes || "")) {
       await updateNotes(campaignId, listing.id, notes);
     }
@@ -180,7 +214,7 @@ export function ListingDetailSheet({
                 className="text-[16px] font-bold truncate pr-3"
                 style={{ color: "var(--ink)" }}
               >
-                {listing.title || "Chi tiết tin đăng"}
+                {listing.title || "Listing details"}
               </DialogPrimitive.Title>
               <button
                 onClick={onClose}
@@ -219,7 +253,7 @@ export function ListingDetailSheet({
                     }}
                   >
                     <span className="text-[13px]" style={{ color: "var(--ink-30)" }}>
-                      Chưa có hình ảnh
+                      No image available
                     </span>
                   </div>
                 )}
@@ -258,14 +292,14 @@ export function ListingDetailSheet({
                     className="text-[24px] font-extrabold"
                     style={{ color: "var(--ink)", letterSpacing: "-0.8px" }}
                   >
-                    {listing.price_display || "Liên hệ"}
+                    {listing.price_display || "Contact"}
                   </div>
                   {listing.deposit_vnd && (
                     <div
                       className="text-[13px] mt-0.5"
                       style={{ color: "var(--ink-50)" }}
                     >
-                      Cọc: {(listing.deposit_vnd / 1_000_000).toFixed(0)} triệu
+                      Deposit: {(listing.deposit_vnd / 1_000_000).toFixed(0)}M
                     </div>
                   )}
                   {listing.title && (
@@ -283,28 +317,28 @@ export function ListingDetailSheet({
                   {listing.area_sqm != null && (
                     <InfoItem
                       icon={<Maximize2 className="h-4 w-4" />}
-                      label="Diện tích"
+                      label="Area"
                       value={`${listing.area_sqm} m²`}
                     />
                   )}
                   {listing.bedrooms != null && (
                     <InfoItem
                       icon={<Bed className="h-4 w-4" />}
-                      label="Phòng ngủ"
-                      value={`${listing.bedrooms} PN`}
+                      label="Bedrooms"
+                      value={`${listing.bedrooms} BR`}
                     />
                   )}
                   {listing.bathrooms != null && (
                     <InfoItem
                       icon={<Bath className="h-4 w-4" />}
-                      label="Phòng tắm"
-                      value={`${listing.bathrooms} PT`}
+                      label="Bathrooms"
+                      value={`${listing.bathrooms} BA`}
                     />
                   )}
                   {listing.district && (
                     <InfoItem
                       icon={<MapPin className="h-4 w-4" />}
-                      label="Khu vực"
+                      label="District"
                       value={listing.district}
                     />
                   )}
@@ -329,7 +363,7 @@ export function ListingDetailSheet({
                     className="inline-flex items-center px-3 py-1.5 rounded-full text-[12px] font-semibold"
                     style={{ background: "var(--jade-15)", color: "var(--jade)" }}
                   >
-                    Phù hợp {listing.match_score}%
+                    {listing.match_score}% match
                   </div>
                 )}
 
@@ -350,7 +384,7 @@ export function ListingDetailSheet({
                         className="text-[13px] font-medium mt-1"
                         style={{ color: "var(--terra)" }}
                       >
-                        {descExpanded ? "Thu gọn" : "Xem thêm"}
+                        {descExpanded ? "Show less" : "Show more"}
                       </button>
                     )}
                   </div>
@@ -393,7 +427,7 @@ export function ListingDetailSheet({
                       className="text-[13px] font-semibold"
                       style={{ color: "var(--ink)" }}
                     >
-                      Thông tin liên hệ
+                      Contact info
                     </p>
                     {listing.landlord_name && (
                       <p className="text-[13px]" style={{ color: "var(--ink-70)" }}>
@@ -457,13 +491,13 @@ export function ListingDetailSheet({
                       className="text-[13px] font-semibold"
                       style={{ color: "var(--ink)" }}
                     >
-                      Ghi chú
+                      Notes
                     </label>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       onBlur={handleNotesBlur}
-                      placeholder="Thêm ghi chú về căn hộ này..."
+                      placeholder="Add notes about this listing..."
                       rows={3}
                       className="w-full px-3 py-2.5 rounded-xl text-[13px] resize-none"
                       style={{
@@ -491,7 +525,7 @@ export function ListingDetailSheet({
                     )}
                     {listing.posted_date && (
                       <span className="text-[11px]" style={{ color: "var(--ink-30)" }}>
-                        {new Date(listing.posted_date).toLocaleDateString("vi-VN")}
+                        {new Date(listing.posted_date).toLocaleDateString("en-US")}
                       </span>
                     )}
                   </div>
@@ -503,7 +537,7 @@ export function ListingDetailSheet({
                       className="flex items-center gap-1 text-[12px] font-medium"
                       style={{ color: "var(--terra)" }}
                     >
-                      Xem bài gốc
+                      View original
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
@@ -543,7 +577,7 @@ export function ListingDetailSheet({
                       className="text-[11px] font-medium"
                       style={{ color: "var(--ink-30)" }}
                     >
-                      Bỏ qua
+                      Skip
                     </span>
                   </div>
 
@@ -565,7 +599,7 @@ export function ListingDetailSheet({
                       className="text-[11px] font-medium"
                       style={{ color: "var(--terra)" }}
                     >
-                      Xem thêm
+                      Like
                     </span>
                   </div>
 
@@ -588,7 +622,7 @@ export function ListingDetailSheet({
                       className="text-[11px] font-medium"
                       style={{ color: "var(--ink-30)" }}
                     >
-                      Liên hệ luôn
+                      Contact now
                     </span>
                   </div>
                 </div>
@@ -601,7 +635,7 @@ export function ListingDetailSheet({
                       style={{ background: "var(--terra)" }}
                     >
                       <MessageCircle className="h-4 w-4" />
-                      Liên hệ chủ nhà
+                      Contact landlord
                     </button>
                   )}
                   {listing.listing_url && (
@@ -616,7 +650,7 @@ export function ListingDetailSheet({
                       }}
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Xem bài gốc
+                      View original
                     </a>
                   )}
                 </div>

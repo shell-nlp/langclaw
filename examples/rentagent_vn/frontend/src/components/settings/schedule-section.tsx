@@ -80,13 +80,13 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
 
   return (
     <div className="space-y-4">
-      {/* Lịch hoạt động */}
+      {/* Schedule */}
       <div>
         <p
           className="text-[11px] font-semibold uppercase mb-2 px-1"
           style={{ color: "var(--ink-30)", letterSpacing: "0.8px" }}
         >
-          Lịch hoạt động
+          Schedule
         </p>
         <div
           style={{
@@ -97,8 +97,8 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
           }}
         >
           <SettingsRow
-            label="Quét tự động"
-            sub="Mỗi 2 giờ · 7:00 – 22:00"
+            label="Auto scan"
+            sub="Every 2 hours · 7:00 AM – 10:00 PM"
             toggle={
               <Toggle
                 on={autoScanOn}
@@ -108,8 +108,8 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
           />
           <div style={{ borderTop: "1px solid var(--ink-04)" }} />
           <SettingsRow
-            label="Thông báo tin mới"
-            sub="Ngay khi có tin phù hợp"
+            label="New listing notifications"
+            sub="When matching listings are found"
             toggle={
               <Toggle
                 on={notifOn}
@@ -120,13 +120,13 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
         </div>
       </div>
 
-      {/* Phân tích khu vực */}
+      {/* Area Research */}
       <div>
         <p
           className="text-[11px] font-semibold uppercase mb-2 px-1"
           style={{ color: "var(--ink-30)", letterSpacing: "0.8px" }}
         >
-          Phân tích khu vực
+          Area Research
         </p>
         <div
           style={{
@@ -137,8 +137,8 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
           }}
         >
           <SettingsRow
-            label="Khảo sát tự động"
-            sub="Khi bạn nhấn 'Xem thêm'"
+            label="Auto research"
+            sub="When you tap 'View more'"
             toggle={
               <Toggle
                 on={true}
@@ -148,8 +148,8 @@ export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
           />
           <div style={{ borderTop: "1px solid var(--ink-04)" }} />
           <SettingsRow
-            label="Thông báo kết quả khảo sát"
-            sub="Khi phân tích khu vực xong"
+            label="Research result notifications"
+            sub="When area analysis is complete"
             toggle={
               <Toggle
                 on={researchNotifOn}
