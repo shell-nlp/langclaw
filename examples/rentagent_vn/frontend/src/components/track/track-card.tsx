@@ -186,12 +186,12 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
           >
             <iframe
               src={browserUrl}
-              className="absolute inset-0 border-0 pointer-events-none"
+              className="absolute top-0 left-0 border-0 pointer-events-none"
               style={{
-                width: "100%",
-                height: "100%",
-                transform: "scale(1.5)",
-                transformOrigin: "top center",
+                width: 1200,
+                height: 800,
+                transform: "scale(0.1)",
+                transformOrigin: "top left",
               }}
               sandbox="allow-scripts allow-same-origin"
               title="Research live preview"

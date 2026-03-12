@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { ResearchResults } from "@/components/dashboard/research-results";
-import { ResearchProgress } from "@/components/dashboard/research-progress";
 import { OutreachDialog } from "@/components/dashboard/outreach-dialog";
 import { ZaloSettingsDialog } from "@/components/zalo/zalo-settings-dialog";
 import { useListingStore } from "@/stores/listing-store";
@@ -119,7 +118,7 @@ export function ListingDetailSheet({
   onContact,
 }: ListingDetailSheetProps) {
   const { updateNotes, fetchListings } = useListingStore();
-  const { researching, researchByListing } = useResearchStore();
+  const { researching, researchByListing, liveState } = useResearchStore();
   const [descExpanded, setDescExpanded] = useState(false);
   const [notes, setNotes] = useState(listing.user_notes || "");
   const [outreachOpen, setOutreachOpen] = useState(false);
@@ -159,6 +158,11 @@ export function ListingDetailSheet({
   const researchId = listing.research_id ?? researchByListing[listing.id];
   const research = researchId ? researching[researchId] : null;
   const overallScore = research?.overall_score ?? null;
+  const live = researchId ? liveState[researchId] : null;
+  const browserUrl = live?.browserUrl ?? null;
+  const currentStep = live?.currentStep ?? null;
+  const currentDetail = live?.currentDetail ?? null;
+  const isResearchRunning = research?.status === "running" && browserUrl;
 
   const handleNotesBlur = async () => {
     if (saveTimeoutRef.current) {
@@ -410,10 +414,44 @@ export function ListingDetailSheet({
                 {research &&
                   (research.status === "running" || research.status === "queued") && (
                     <div
-                      className="rounded-xl p-4"
+                      className="rounded-xl overflow-hidden"
                       style={{ border: "1px solid var(--ink-08)" }}
                     >
-                      <ResearchProgress research={research} />
+                      {/* Live preview iframe - centered */}
+                      {isResearchRunning && (
+                        <div
+                          className="relative overflow-hidden"
+                          style={{
+                            width: "100%",
+                            height: 180,
+                            background: "var(--cream-100)",
+                          }}
+                        >
+                          <iframe
+                            src={browserUrl}
+                            className="absolute border-0 pointer-events-none"
+                            style={{
+                              width: 1440,
+                              height: 900,
+                              left: "50%",
+                              top: 0,
+                              transform: "translateX(-50%) scale(0.2)",
+                              transformOrigin: "top center",
+                            }}
+                            sandbox="allow-scripts allow-same-origin"
+                            title="Research live preview"
+                          />
+                        </div>
+                      )}
+                      <div className="px-4 py-3 flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin flex-shrink-0"
+                          style={{ borderColor: "var(--jade)", borderTopColor: "transparent" }}
+                        />
+                        <span className="text-[13px] truncate" style={{ color: "var(--jade)" }}>
+                          {currentDetail || currentStep || "Researching..."}
+                        </span>
+                      </div>
                     </div>
                   )}
 
