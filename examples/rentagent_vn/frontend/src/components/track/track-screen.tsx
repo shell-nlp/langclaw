@@ -13,6 +13,7 @@ export function TrackScreen({ campaignId, campaignPill }: TrackScreenProps) {
   const listings = useListingStore((s) => s.listings);
 
   // Filter by sections per PRD stage mapping
+  const pendingReview = listings.filter((l) => l.stage === "pending_review");
   const researching = listings.filter((l) => l.stage === "researching");
   const contacted = listings.filter(
     (l) => l.stage === "contacted" || l.stage === "viewing"
@@ -21,7 +22,7 @@ export function TrackScreen({ campaignId, campaignPill }: TrackScreenProps) {
     (l) => l.stage === "viewed" || l.stage === "shortlisted"
   );
 
-  const total = researching.length + contacted.length + done.length;
+  const total = pendingReview.length + researching.length + contacted.length + done.length;
 
   return (
     <div
@@ -68,6 +69,13 @@ export function TrackScreen({ campaignId, campaignPill }: TrackScreenProps) {
           </div>
         ) : (
           <>
+            <TrackSection
+              title="Pending Review"
+              dotColor="var(--amber)"
+              listings={pendingReview}
+              campaignId={campaignId}
+              pulseDot
+            />
             <TrackSection
               title="Researching"
               dotColor="var(--amber)"

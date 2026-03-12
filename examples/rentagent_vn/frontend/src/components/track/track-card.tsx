@@ -15,6 +15,17 @@ function ResearchBadge({ listing }: { listing: Listing }) {
   const researchId = listing.research_id ?? researchByListing[listing.id];
   const research = researchId ? researching[researchId] : null;
 
+  if (listing.stage === "pending_review") {
+    return (
+      <div
+        className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full"
+        style={{ background: "var(--amber-15)", color: "var(--amber)" }}
+      >
+        <span className="pulse-dot">●</span> Review draft
+      </div>
+    );
+  }
+
   if (listing.stage === "contacted" || listing.stage === "viewing") {
     return (
       <div
@@ -214,7 +225,7 @@ export function TrackCard({ listing, campaignId }: TrackCardProps) {
         onClose={() => setDetailOpen(false)}
         listing={listing}
         campaignId={campaignId}
-        mode="track"
+        mode={listing.stage === "pending_review" ? "review" : "track"}
       />
     </>
   );

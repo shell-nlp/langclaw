@@ -19,14 +19,15 @@ import { OutreachDialog } from "@/components/dashboard/outreach-dialog";
 import { ZaloSettingsDialog } from "@/components/zalo/zalo-settings-dialog";
 import { useListingStore } from "@/stores/listing-store";
 import { useResearchStore } from "@/stores/research-store";
-import type { Listing } from "@/types";
+import * as api from "@/lib/api";
+import type { Listing, OutreachMessage } from "@/types";
 
 interface ListingDetailSheetProps {
   open: boolean;
   onClose: () => void;
   listing: Listing;
   campaignId: string;
-  mode: "discover" | "track";
+  mode: "discover" | "track" | "review";
   onLike?: () => void;
   onSkip?: () => void;
   onContact?: () => void;
@@ -123,6 +124,10 @@ export function ListingDetailSheet({
   const [notes, setNotes] = useState(listing.user_notes || "");
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [zaloSettingsOpen, setZaloSettingsOpen] = useState(false);
+  const [draftMessage, setDraftMessage] = useState<OutreachMessage | null>(null);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [lastSentMessage, setLastSentMessage] = useState<OutreachMessage | null>(null);
+  const [sentMessageExpanded, setSentMessageExpanded] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
@@ -131,6 +136,40 @@ export function ListingDetailSheet({
     setNotes(listing.user_notes || "");
     isInitialMount.current = true;
   }, [listing.id]);
+
+  // Load outreach history when in track/review mode or listing is contacted
+  useEffect(() => {
+    if ((mode === "track" || mode === "review") && open) {
+      setDraftLoading(true);
+      api
+        .getOutreachHistory(campaignId, listing.id)
+        .then((history) => {
+          // Find draft for review mode
+          const draft = history.find((m) => m.status === "drafted");
+          setDraftMessage(draft || null);
+
+          // Find last sent message for track mode
+          const sentMessages = history.filter((m) => m.status === "sent" || m.status === "replied");
+          if (sentMessages.length > 0) {
+            // Sort by sent_at descending to get the most recent
+            sentMessages.sort((a, b) => {
+              if (!a.sent_at || !b.sent_at) return 0;
+              return new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
+            });
+            setLastSentMessage(sentMessages[0]);
+          } else {
+            setLastSentMessage(null);
+          }
+        })
+        .catch(() => {
+          setDraftMessage(null);
+          setLastSentMessage(null);
+        })
+        .finally(() => {
+          setDraftLoading(false);
+        });
+    }
+  }, [mode, open, campaignId, listing.id]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -522,6 +561,58 @@ export function ListingDetailSheet({
                   </div>
                 )}
 
+                {/* Last sent message (track mode, when contacted) */}
+                {mode === "track" && lastSentMessage && (
+                  <div
+                    className="rounded-xl overflow-hidden"
+                    style={{ border: "1px solid var(--ink-08)" }}
+                  >
+                    <div
+                      className="p-4"
+                      style={{ background: "var(--jade-15)" }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p
+                          className="text-[13px] font-semibold"
+                          style={{ color: "var(--jade)" }}
+                        >
+                          Message sent
+                        </p>
+                        {lastSentMessage.sent_at && (
+                          <span
+                            className="text-[11px]"
+                            style={{ color: "var(--ink-30)" }}
+                          >
+                            {new Date(lastSentMessage.sent_at + "Z").toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`text-[13px] leading-relaxed ${
+                          sentMessageExpanded ? "" : "line-clamp-2"
+                        }`}
+                        style={{ color: "var(--ink-70)" }}
+                      >
+                        {lastSentMessage.final_text || lastSentMessage.draft_text}
+                      </p>
+                      {(lastSentMessage.final_text || lastSentMessage.draft_text).length > 100 && (
+                        <button
+                          onClick={() => setSentMessageExpanded(!sentMessageExpanded)}
+                          className="text-[12px] font-medium mt-1"
+                          style={{ color: "var(--jade)" }}
+                        >
+                          {sentMessageExpanded ? "Show less" : "View more"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Notes (track mode only) */}
                 {mode === "track" && (
                   <div className="space-y-2">
@@ -664,6 +755,56 @@ export function ListingDetailSheet({
                     </span>
                   </div>
                 </div>
+              ) : mode === "review" ? (
+                <div className="px-5 py-4 space-y-3">
+                  {/* Draft preview */}
+                  {draftLoading ? (
+                    <div
+                      className="flex items-center justify-center py-4"
+                      style={{ color: "var(--ink-30)" }}
+                    >
+                      <div
+                        className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                        style={{ borderColor: "var(--amber)", borderTopColor: "transparent" }}
+                      />
+                    </div>
+                  ) : draftMessage ? (
+                    <>
+                      <div
+                        className="rounded-xl p-3"
+                        style={{ background: "var(--cream)" }}
+                      >
+                        <p
+                          className="text-[12px] font-medium mb-1"
+                          style={{ color: "var(--ink-50)" }}
+                        >
+                          Draft message
+                        </p>
+                        <p
+                          className="text-[13px] line-clamp-2"
+                          style={{ color: "var(--ink)" }}
+                        >
+                          {draftMessage.draft_text}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setOutreachOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
+                        style={{ background: "var(--terra)" }}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Edit & Send
+                      </button>
+                    </>
+                  ) : (
+                    <div
+                      className="text-center py-4 text-[13px]"
+                      style={{ color: "var(--ink-30)" }}
+                    >
+                      No draft message found
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="px-5 py-4 space-y-3">
                   {hasLandlordContact && (
@@ -698,7 +839,7 @@ export function ListingDetailSheet({
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
 
-      {/* Outreach dialog (track mode) */}
+      {/* Outreach dialog (track/review mode) */}
       <OutreachDialog
         open={outreachOpen}
         onClose={() => setOutreachOpen(false)}
@@ -708,8 +849,13 @@ export function ListingDetailSheet({
           setOutreachOpen(false);
           setZaloSettingsOpen(true);
         }}
-        onSuccess={() => {
+        onSuccess={async () => {
+          // If in review mode, update stage to contacted
+          if (mode === "review") {
+            await api.updateListing(campaignId, listing.id, { stage: "contacted" });
+          }
           fetchListings(campaignId);
+          onClose();
         }}
       />
 

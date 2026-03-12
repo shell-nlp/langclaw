@@ -5,6 +5,7 @@
 export type PipelineStage =
   | "new"
   | "researching"
+  | "pending_review"
   | "contacted"
   | "viewing"
   | "viewed"
@@ -18,6 +19,7 @@ export const PIPELINE_STAGES: {
 }[] = [
   { key: "new", label: "New", color: "bg-blue-500" },
   { key: "researching", label: "Researching", color: "bg-teal-500" },
+  { key: "pending_review", label: "Pending Review", color: "bg-amber-500" },
   { key: "contacted", label: "Contacted", color: "bg-yellow-500" },
   { key: "viewing", label: "Viewing", color: "bg-orange-500" },
   { key: "viewed", label: "Viewed", color: "bg-purple-500" },
@@ -95,6 +97,7 @@ export interface CampaignPreferences {
   max_area?: number;
   property_type?: string;
   notes?: string;
+  outreach_auto_send?: boolean;
   [key: string]: unknown;
 }
 

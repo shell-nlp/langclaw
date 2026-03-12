@@ -19,6 +19,7 @@ interface CampaignState {
   updateCampaign: (id: string, data: Parameters<typeof api.updateCampaign>[1]) => Promise<void>;
   archiveCampaign: (id: string) => Promise<void>;
   setCampaign: (campaign: Campaign | null) => void;
+  setOutreachAutoSend: (campaignId: string, autoSend: boolean) => Promise<void>;
   clearError: () => void;
 }
 
@@ -127,5 +128,29 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   },
 
   setCampaign: (campaign) => set({ campaign }),
+
+  setOutreachAutoSend: async (campaignId, autoSend) => {
+    const current = get().campaign;
+    if (!current || current.id !== campaignId) return;
+
+    const updatedPreferences = {
+      ...current.preferences,
+      outreach_auto_send: autoSend,
+    };
+
+    try {
+      const campaign = await api.updateCampaign(campaignId, {
+        preferences: updatedPreferences,
+      });
+      set((s) => ({
+        campaign: s.campaign?.id === campaignId ? campaign : s.campaign,
+        campaigns: s.campaigns.map((c) => (c.id === campaignId ? campaign : c)),
+      }));
+    } catch (e) {
+      set({ error: (e as Error).message });
+      throw e;
+    }
+  },
+
   clearError: () => set({ error: null }),
 }));

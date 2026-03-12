@@ -11,6 +11,7 @@ interface TrackSectionProps {
   listings: Listing[];
   collapsedByDefault?: boolean;
   campaignId: string;
+  pulseDot?: boolean;
 }
 
 export function TrackSection({
@@ -19,6 +20,7 @@ export function TrackSection({
   listings,
   collapsedByDefault = false,
   campaignId,
+  pulseDot = false,
 }: TrackSectionProps) {
   const [collapsed, setCollapsed] = useState(collapsedByDefault);
 
@@ -34,7 +36,7 @@ export function TrackSection({
       >
         <div className="flex items-center gap-2">
           <div
-            className="rounded-full flex-shrink-0"
+            className={`rounded-full flex-shrink-0 ${pulseDot ? "pulse-dot" : ""}`}
             style={{ width: 8, height: 8, background: dotColor }}
           />
           <span

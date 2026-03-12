@@ -1,18 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { useListingStore } from "@/stores/listing-store";
 import { useResearchStore } from "@/stores/research-store";
 import { useCampaignStore } from "@/stores/campaign-store";
 import { useScanStreamStore } from "@/stores/scan-stream-store";
 import { useActivityStore } from "@/stores/activity-store";
+import { useZaloStore } from "@/stores/zalo-store";
 import * as api from "@/lib/api";
 import type { Listing } from "@/types";
 import { CardStack } from "./card-stack";
 import { ActionBar } from "./action-bar";
 import { EmptyDiscover } from "./empty-discover";
 import { ScanLiveSheet } from "./scan-live-sheet";
+import { OutreachConsentSheet } from "./outreach-consent-sheet";
 import { ListingDetailSheet } from "@/components/listing";
 
 interface DiscoverScreenProps {
@@ -27,12 +29,17 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
   const researching = useResearchStore((s) => s.researching);
   const researchByListing = useResearchStore((s) => s.researchByListing);
   const campaign = useCampaignStore((s) => s.campaign);
+  const setOutreachAutoSend = useCampaignStore((s) => s.setOutreachAutoSend);
   const scanStatus = useScanStreamStore((s) => s.status);
   const isScanning = useActivityStore((s) => s.isScanning);
   const triggerScan = useActivityStore((s) => s.triggerScan);
+  const zaloStatus = useZaloStore((s) => s.status);
+  const fetchZaloStatus = useZaloStore((s) => s.fetchStatus);
   const [scanSheetOpen, setScanSheetOpen] = useState(false);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
+  const [consentSheetOpen, setConsentSheetOpen] = useState(false);
+  const pendingContactRef = useRef<Listing | null>(null);
 
   // Only new listings
   const newListings = listings.filter(
@@ -59,6 +66,11 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
     }
   }, [scanStatus, campaignId, fetchListings]);
 
+  // Fetch Zalo status on mount
+  useEffect(() => {
+    fetchZaloStatus();
+  }, [fetchZaloStatus]);
+
   const getResearch = useCallback(
     (listing: Listing) => {
       const researchId = listing.research_id ?? researchByListing[listing.id];
@@ -68,8 +80,94 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
     [researching, researchByListing]
   );
 
+  const executeContact = useCallback(
+    async (listing: Listing, autoSend: boolean) => {
+      // Optimistic: remove card immediately
+      setRemoving((prev) => new Set([...prev, listing.id]));
+
+      try {
+        // Check if listing has landlord phone
+        if (!listing.landlord_phone) {
+          toast.error("No contact info available for this listing");
+          setRemoving((prev) => {
+            const next = new Set(prev);
+            next.delete(listing.id);
+            return next;
+          });
+          return;
+        }
+
+        // Create AI draft
+        const draft = await api.draftOutreach(campaignId, listing.id);
+
+        if (autoSend) {
+          // Auto-send the message
+          try {
+            await api.sendOutreach(campaignId, listing.id, draft.id);
+            await api.updateListing(campaignId, listing.id, { stage: "contacted" });
+            useListingStore.setState((s) => ({
+              listings: s.listings.map((l) =>
+                l.id === listing.id ? { ...l, stage: "contacted" } : l
+              ),
+            }));
+            toast.success("Message sent to landlord");
+          } catch {
+            // Send failed, fall back to pending_review
+            await api.updateListing(campaignId, listing.id, { stage: "pending_review" });
+            useListingStore.setState((s) => ({
+              listings: s.listings.map((l) =>
+                l.id === listing.id ? { ...l, stage: "pending_review" } : l
+              ),
+            }));
+            toast.error("Failed to send — review draft in Track tab");
+          }
+        } else {
+          // Manual review: move to pending_review
+          await api.updateListing(campaignId, listing.id, { stage: "pending_review" });
+          useListingStore.setState((s) => ({
+            listings: s.listings.map((l) =>
+              l.id === listing.id ? { ...l, stage: "pending_review" } : l
+            ),
+          }));
+          toast.info("Draft ready — review in Track tab");
+        }
+      } catch {
+        // Revert: put card back
+        setRemoving((prev) => {
+          const next = new Set(prev);
+          next.delete(listing.id);
+          return next;
+        });
+        toast.error("Something went wrong, please try again");
+      }
+    },
+    [campaignId]
+  );
+
   const handleSwipe = useCallback(
     async (listing: Listing, direction: "like" | "skip" | "contact") => {
+      if (direction === "contact") {
+        // Check Zalo connection first
+        const isConnected = zaloStatus?.connected ?? false;
+        if (!isConnected) {
+          toast.error("Connect Zalo in Settings to contact landlords");
+          return;
+        }
+
+        // Check if preference is set
+        const autoSendPref = campaign?.preferences?.outreach_auto_send;
+        if (autoSendPref === undefined) {
+          // Show consent modal, store pending listing
+          pendingContactRef.current = listing;
+          setConsentSheetOpen(true);
+          return;
+        }
+
+        // Execute contact with the preference
+        await executeContact(listing, autoSendPref);
+        return;
+      }
+
       // Optimistic: remove card immediately
       setRemoving((prev) => new Set([...prev, listing.id]));
 
@@ -92,13 +190,6 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
           }
           // Refetch research data
           await useResearchStore.getState().fetchAllResearch(campaignId);
-        } else if (direction === "contact") {
-          await api.updateListing(campaignId, listing.id, { stage: "contacted" });
-          useListingStore.setState((s) => ({
-            listings: s.listings.map((l) =>
-              l.id === listing.id ? { ...l, stage: "contacted" } : l
-            ),
-          }));
         } else if (direction === "skip") {
           await api.updateListing(campaignId, listing.id, {
             stage: "skipped",
@@ -120,7 +211,22 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
         toast.error("Something went wrong, please try again");
       }
     },
-    [campaignId]
+    [campaignId, campaign?.preferences?.outreach_auto_send, zaloStatus?.connected, executeContact]
+  );
+
+  const handleConsentConfirm = useCallback(
+    async (autoSend: boolean) => {
+      // Save preference
+      await setOutreachAutoSend(campaignId, autoSend);
+
+      // Execute pending contact if any
+      const listing = pendingContactRef.current;
+      if (listing) {
+        pendingContactRef.current = null;
+        await executeContact(listing, autoSend);
+      }
+    },
+    [campaignId, setOutreachAutoSend, executeContact]
   );
 
   const handleTriggerScan = async () => {
@@ -219,6 +325,16 @@ export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps
           onContact={() => handleSwipe(detailListing, "contact")}
         />
       )}
+
+      {/* Outreach consent sheet */}
+      <OutreachConsentSheet
+        open={consentSheetOpen}
+        onClose={() => {
+          setConsentSheetOpen(false);
+          pendingContactRef.current = null;
+        }}
+        onConfirm={handleConsentConfirm}
+      />
     </div>
   );
 }
