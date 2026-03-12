@@ -6,6 +6,7 @@ interface CampaignState {
   campaign: Campaign | null;
   campaigns: Campaign[];
   stats: CampaignStats | null;
+  statsMap: Record<string, CampaignStats | null>;
   loading: boolean;
   error: string | null;
 
@@ -13,8 +14,10 @@ interface CampaignState {
   fetchCampaigns: () => Promise<void>;
   fetchCampaign: (id: string) => Promise<void>;
   fetchStats: (id: string) => Promise<void>;
+  fetchAllStats: (ids: string[]) => Promise<void>;
   createCampaign: (data: Parameters<typeof api.createCampaign>[0]) => Promise<Campaign>;
   updateCampaign: (id: string, data: Parameters<typeof api.updateCampaign>[1]) => Promise<void>;
+  archiveCampaign: (id: string) => Promise<void>;
   setCampaign: (campaign: Campaign | null) => void;
   clearError: () => void;
 }
@@ -23,6 +26,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   campaign: null,
   campaigns: [],
   stats: null,
+  statsMap: {},
   loading: false,
   error: null,
 
@@ -54,10 +58,31 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   fetchStats: async (id) => {
     try {
       const stats = await api.getCampaignStats(id);
-      set({ stats });
+      set((s) => ({
+        stats,
+        statsMap: { ...s.statsMap, [id]: stats },
+      }));
     } catch (e) {
       console.error("Failed to fetch stats:", e);
     }
+  },
+
+  fetchAllStats: async (ids) => {
+    const results = await Promise.allSettled(
+      ids.map((id) => api.getCampaignStats(id))
+    );
+    const newStatsMap: Record<string, CampaignStats | null> = {};
+    results.forEach((result, index) => {
+      const id = ids[index];
+      if (result.status === "fulfilled") {
+        newStatsMap[id] = result.value;
+      } else {
+        newStatsMap[id] = null;
+      }
+    });
+    set((s) => ({
+      statsMap: { ...s.statsMap, ...newStatsMap },
+    }));
   },
 
   createCampaign: async (data) => {
@@ -85,6 +110,19 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       }));
     } catch (e) {
       set({ error: (e as Error).message });
+    }
+  },
+
+  archiveCampaign: async (id) => {
+    try {
+      await api.updateCampaign(id, { status: "archived" });
+      set((s) => ({
+        campaigns: s.campaigns.filter((c) => c.id !== id),
+        campaign: s.campaign?.id === id ? null : s.campaign,
+      }));
+    } catch (e) {
+      set({ error: (e as Error).message });
+      throw e;
     }
   },
 
