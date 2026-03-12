@@ -5,10 +5,12 @@ import { TrackSection } from "./track-section";
 
 interface TrackScreenProps {
   campaignId: string;
+  campaignPill?: React.ReactNode;
 }
 
-export function TrackScreen({ campaignId }: TrackScreenProps) {
-  const { listings } = useListingStore();
+export function TrackScreen({ campaignId, campaignPill }: TrackScreenProps) {
+  // Use selector to avoid subscribing to entire store
+  const listings = useListingStore((s) => s.listings);
 
   // Filter by sections per PRD stage mapping
   const researching = listings.filter((l) => l.stage === "researching");
@@ -28,7 +30,7 @@ export function TrackScreen({ campaignId }: TrackScreenProps) {
     >
       {/* Sticky header */}
       <div
-        className="flex-shrink-0 px-5 pt-5 pb-3"
+        className="flex-shrink-0 px-5 pt-4 pb-3"
         style={{
           position: "sticky",
           top: 0,
@@ -37,6 +39,8 @@ export function TrackScreen({ campaignId }: TrackScreenProps) {
           borderBottom: "1px solid var(--ink-04)",
         }}
       >
+        {/* Campaign pill */}
+        <div className="mb-2">{campaignPill}</div>
         <h1
           className="text-[22px] font-extrabold"
           style={{ color: "var(--ink)", letterSpacing: "-0.8px" }}

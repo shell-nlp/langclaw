@@ -66,7 +66,9 @@ interface ScheduleSectionProps {
 }
 
 export function ScheduleSection({ campaignId }: ScheduleSectionProps) {
-  const { campaign, updateCampaign } = useCampaignStore();
+  // Use selectors to avoid subscribing to entire store
+  const campaign = useCampaignStore((s) => s.campaign);
+  const updateCampaign = useCampaignStore((s) => s.updateCampaign);
   const [notifOn, setNotifOn] = useState(true);
   const [researchNotifOn, setResearchNotifOn] = useState(true);
 

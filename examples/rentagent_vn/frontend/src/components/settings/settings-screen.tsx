@@ -6,16 +6,19 @@ import { ScheduleSection } from "./schedule-section";
 
 interface SettingsScreenProps {
   campaignId: string;
+  campaignPill?: React.ReactNode;
 }
 
-export function SettingsScreen({ campaignId }: SettingsScreenProps) {
+export function SettingsScreen({ campaignId, campaignPill }: SettingsScreenProps) {
   return (
     <div
       className="flex flex-col h-full overflow-y-auto"
       style={{ background: "var(--cream)", paddingBottom: 40 }}
     >
       {/* Header */}
-      <div className="px-5 pt-5 pb-4">
+      <div className="px-5 pt-4 pb-4">
+        {/* Campaign pill */}
+        <div className="mb-2">{campaignPill}</div>
         <h1
           className="text-[22px] font-extrabold"
           style={{ color: "var(--ink)", letterSpacing: "-0.8px" }}

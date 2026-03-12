@@ -3,7 +3,8 @@
 import { useCampaignStore } from "@/stores/campaign-store";
 
 export function SearchQueryCard() {
-  const { campaign } = useCampaignStore();
+  // Use selector to avoid subscribing to entire store
+  const campaign = useCampaignStore((s) => s.campaign);
   const prefs = campaign?.preferences;
 
   const pills: string[] = [];

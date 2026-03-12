@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { useListingStore } from "@/stores/listing-store";
 import { useResearchStore } from "@/stores/research-store";
@@ -18,14 +17,19 @@ import { ListingDetailSheet } from "@/components/listing";
 
 interface DiscoverScreenProps {
   campaignId: string;
+  campaignPill?: React.ReactNode;
 }
 
-export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
-  const { listings, fetchListings } = useListingStore();
-  const { researching, researchByListing } = useResearchStore();
-  const { campaign } = useCampaignStore();
+export function DiscoverScreen({ campaignId, campaignPill }: DiscoverScreenProps) {
+  // Use selectors to avoid subscribing to entire stores
+  const listings = useListingStore((s) => s.listings);
+  const fetchListings = useListingStore((s) => s.fetchListings);
+  const researching = useResearchStore((s) => s.researching);
+  const researchByListing = useResearchStore((s) => s.researchByListing);
+  const campaign = useCampaignStore((s) => s.campaign);
   const scanStatus = useScanStreamStore((s) => s.status);
-  const { isScanning, triggerScan } = useActivityStore();
+  const isScanning = useActivityStore((s) => s.isScanning);
+  const triggerScan = useActivityStore((s) => s.triggerScan);
   const [scanSheetOpen, setScanSheetOpen] = useState(false);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
@@ -128,15 +132,6 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
     }
   };
 
-  // Build search pill text from campaign preferences
-  const prefs = campaign?.preferences;
-  const pillParts: string[] = [];
-  if (prefs?.district) pillParts.push(prefs.district);
-  if (prefs?.bedrooms) pillParts.push(`${prefs.bedrooms}BR`);
-  if (prefs?.max_price)
-    pillParts.push(`≤ ${Math.round(prefs.max_price / 1_000_000)}tr`);
-  const pillText = pillParts.join(" · ") || "All";
-
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--cream)" }}>
       {/* Header */}
@@ -144,20 +139,8 @@ export function DiscoverScreen({ campaignId }: DiscoverScreenProps) {
         className="flex-shrink-0 flex items-center justify-between"
         style={{ padding: "12px 20px" }}
       >
-        {/* Search pill */}
-        <div
-          className="flex items-center gap-2 px-3 py-2 text-[13px] font-medium"
-          style={{
-            background: "var(--ds-white)",
-            borderRadius: "var(--r-full)",
-            border: "1px solid var(--ink-08)",
-            color: "var(--ink-70)",
-            maxWidth: "60%",
-          }}
-        >
-          <Search size={13} style={{ color: "var(--ink-30)", flexShrink: 0 }} />
-          <span className="truncate">{pillText}</span>
-        </div>
+        {/* Campaign pill */}
+        {campaignPill}
 
         {/* Right side: scan indicator or count badge */}
         <div className="flex items-center gap-2">
