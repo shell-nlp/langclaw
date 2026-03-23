@@ -41,14 +41,16 @@ def make_move_file_tool(workspace_dir: Path) -> BaseTool:
 
     @tool
     async def move_file(src: str, dst_dir: str) -> dict[str, Any]:
-        """Move a file to a different folder inside the workspace.
+        """Move a file or folder to a different location inside the workspace.
 
-        Both the source file and the destination folder must be inside
-        the agent's workspace directory — paths that try to escape it
-        (e.g. ``../../etc``) are rejected.
+        Both the source and the destination folder must be inside the
+        agent's workspace directory — paths that try to escape it
+        (e.g. ``../../etc``) are rejected.  Leading slashes are stripped,
+        so ``/memories/foo`` and ``memories/foo`` are treated identically.
 
         Args:
-            src:     Relative path to the file to move (e.g. ``"reports/old.txt"``).
+            src:     Relative path to the file or folder to move
+                     (e.g. ``"reports/old.txt"`` or ``"memories/til/quiz"``).
             dst_dir: Relative path to the destination folder
                      (e.g. ``"archive"``).  The folder is created if it
                      does not exist.
@@ -64,10 +66,7 @@ def make_move_file_tool(workspace_dir: Path) -> BaseTool:
             return {"error": f"Path '{dst_dir}' is outside the workspace directory."}
 
         if not src_path.exists():
-            return {"error": f"Source file does not exist: '{src}'"}
-
-        if not src_path.is_file():
-            return {"error": f"Source path is not a file: '{src}'"}
+            return {"error": f"Source path does not exist: '{src_path.relative_to(workspace_dir)}'"}
 
         try:
             dst_path.mkdir(parents=True, exist_ok=True)
@@ -81,7 +80,7 @@ def make_move_file_tool(workspace_dir: Path) -> BaseTool:
             }
         except Exception as exc:
             logger.error("move_file: failed to move '{}': {}", src, exc)
-            return {"error": f"Failed to move file: {exc}"}
+            return {"error": f"Failed to move: {exc}"}
 
     return move_file
 
