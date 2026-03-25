@@ -161,7 +161,9 @@ async def _cmd_agentsmd(ctx: CommandContext) -> str:
 
     path = gw.get_agents_md_path(agent_name)
     raw_hash = gw._agents_md_hashes.get(agent_name, "(not yet loaded)")
-    short_hash = raw_hash[:12] + "…" if isinstance(raw_hash, str) and len(raw_hash) > 12 else raw_hash
+    short_hash = (
+        raw_hash[:12] + "…" if isinstance(raw_hash, str) and len(raw_hash) > 12 else raw_hash
+    )
 
     if not path.exists():
         return f"AGENTS.md not found at: {path}"
@@ -246,7 +248,9 @@ async def _cmd_file(ctx: CommandContext) -> str:
         try:
             entries = sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name))
             lines = [f"{'[dir] ' if p.is_dir() else '      '}{p.name}" for p in entries]
-            return f"Directory: {target.relative_to(workspace_resolved)}\n\n" + ("\n".join(lines) or "(empty)")
+            return f"Directory: {target.relative_to(workspace_resolved)}\n\n" + (
+                "\n".join(lines) or "(empty)"
+            )
         except OSError as exc:
             return f"Error listing directory: {exc}"
 

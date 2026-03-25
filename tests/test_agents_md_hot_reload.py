@@ -54,7 +54,9 @@ class DummyAgent:
 
 
 @pytest.mark.asyncio
-async def test_default_agent_rebuilds_when_agents_md_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+async def test_default_agent_rebuilds_when_agents_md_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     # Use a temporary workspace for this test.
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -121,5 +123,3 @@ async def test_default_agent_rebuilds_when_agents_md_changes(tmp_path: Path, mon
     rebuilt = await mgr._ensure_agent_fresh("default")
     assert rebuilt is not initial_agent
     assert mgr._agent_map["default"] is rebuilt
-
-

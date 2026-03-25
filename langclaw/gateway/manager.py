@@ -236,9 +236,7 @@ class GatewayManager:
 
         # Slow path: AGENTS.md changed — rebuild under a per-agent lock so only
         # one task performs the work.
-        logger.info(
-            "AGENTS.md changed for agent '{}' ({}), rebuilding…", agent_name, path
-        )
+        logger.info("AGENTS.md changed for agent '{}' ({}), rebuilding…", agent_name, path)
         lock = self._get_agent_lock(agent_name)
         async with lock:
             # Double-check inside the lock in case another task already rebuilt.
@@ -276,9 +274,7 @@ class GatewayManager:
                     )
                 else:
                     # Named agents reuse their original spec.
-                    spec = (
-                        getattr(self, "_named_agent_specs", None) or {}
-                    ).get(agent_name, {})
+                    spec = (getattr(self, "_named_agent_specs", None) or {}).get(agent_name, {})
                     rebuilt = self._build_named_agent(spec, agent_name)
 
                 self._agent_map[agent_name] = rebuilt
