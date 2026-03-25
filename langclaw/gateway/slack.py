@@ -224,8 +224,9 @@ class SlackChannel(BaseChannel):
         user_id = event.get("user", "")
         channel_id = event.get("channel", "")
         text = event.get("text", "")
-        # Use thread_ts if in thread, else message ts
-        thread_ts = event.get("thread_ts") or event.get("ts")
+        # DMs don't need thread replies; channel mentions always reply in thread
+        is_dm = event.get("channel_type") == "im"
+        thread_ts = None if is_dm else (event.get("thread_ts") or event.get("ts"))
 
         if not user_id or not channel_id:
             logger.debug("Slack message dropped: incomplete event data")
