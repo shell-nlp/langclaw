@@ -222,7 +222,8 @@ def create_claw_agent(
         / ``.astream``.
     """
     try:
-        from deepagents import create_deep_agent
+        # from deepagents import create_deep_agent
+        from langclaw.langchain_api.agent import create_deep_agent
         from deepagents.backends import FilesystemBackend
     except ImportError as exc:
         raise ImportError("deepagents is required. Install with: uv add deepagents") from exc

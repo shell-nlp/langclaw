@@ -1,6 +1,6 @@
 [project]
 name = "langclaw"
-version = "0.1.7"
+version = "0.1.7.dev0"
 requires-python = ">=3.11"
 description = "Production-ready multi-channel AI agent framework built on langchain 1.0, langgraph, and deepagents"
 license = "MIT"
@@ -34,7 +34,7 @@ dependencies = [
     "langchain>=1.0",
     "langgraph>=0.4",
     "langchain-core>=0.3",
-    "deepagents>=0.1",
+    "deepagents==0.4.8",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "apscheduler>=4.0.0a1",
@@ -46,6 +46,8 @@ dependencies = [
     "tenacity>=9.1.4",
     "loguru>=0.7.3",
     "fastapi>=0.135.1",
+    "opensandbox-server>=0.1.9",
+    "opensandbox-code-interpreter>=0.1.2",
 ]
 
 [project.optional-dependencies]
@@ -70,6 +72,10 @@ langclaw = "langclaw.cli.app:app"
 Homepage = "https://github.com/tisu19021997/langclaw"
 Repository = "https://github.com/tisu19021997/langclaw"
 Issues = "https://github.com/tisu19021997/langclaw/issues"
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
 
 [build-system]
 requires = ["hatchling"]
