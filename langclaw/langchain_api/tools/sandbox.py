@@ -42,7 +42,7 @@ GLOB_TIMEOUT = 20.0  # seconds
 
 
 def get_user_workspace_path(user_id: str) -> str:
-    new_workspace_path = Path(f"{workspace_path}/{user_id}/workspace")
+    new_workspace_path = Path(f"{workspace_path}/{user_id}/.langclaw")
     new_workspace_path.mkdir(parents=True, exist_ok=True)
     return str(new_workspace_path)
 
@@ -53,9 +53,9 @@ def get_backend(runtime: ToolRuntime[LangclawContext, None]) -> OpenSandbox:
     backend = OpenSandbox(
         volumes=[
             Volume(
-                name=f"workspace-root-{user_id}",
+                name=f"langclaw-{user_id}",
                 host=Host(path=workspace_path),
-                mount_path="/workspace",
+                mount_path="/.langclaw",
             )
         ]
     )

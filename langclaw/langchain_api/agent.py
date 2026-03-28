@@ -6,7 +6,9 @@ from deepagents.backends.protocol import BackendFactory, BackendProtocol
 from deepagents.middleware.filesystem import FilesystemMiddleware
 from deepagents.middleware.memory import MemoryMiddleware
 from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
-from deepagents.middleware.skills import SkillsMiddleware
+
+# from deepagents.middleware.skills import SkillsMiddleware
+
 from deepagents.middleware.subagents import (
     CompiledSubAgent,
     GENERAL_PURPOSE_SUBAGENT,
@@ -128,7 +130,14 @@ def create_deep_agent(
 
     model = get_default_model() if model is None else resolve_model(model)
     # TODO: 去除原本的backend,使用自己的后端
-    from langclaw.langchain_api.middleware.sandbox_system_tool import SandboxSystemToolMiddleware
+    from langclaw.langchain_api.middleware.sandbox_system_tool import (
+        SandboxSystemToolMiddleware,
+    )
+    from langclaw.langchain_api.middleware.skills import (
+        LangclawSkillsMiddleware as SkillsMiddleware,
+    )
+
+    skills = ["/.langclaw/workspace/skills/"]
 
     backend = backend if backend is not None else (StateBackend)
 
