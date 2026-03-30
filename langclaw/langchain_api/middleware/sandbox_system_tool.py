@@ -1,4 +1,4 @@
-from typing import cast, NotRequired, Annotated
+from typing import Annotated, NotRequired, cast
 
 from deepagents.backends.utils import sanitize_tool_call_id
 from deepagents.middleware._utils import append_to_system_message
@@ -10,21 +10,19 @@ from deepagents.middleware.filesystem import (
 from langchain.agents.middleware import AgentMiddleware
 from langchain.tools import ToolRuntime
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables.config import var_child_runnable_config
-from langchain_core.runnables.config import RunnableConfig
 from langgraph.types import Command
 from loguru import logger
 
 from langclaw.langchain_api.tools.sandbox import (
     edit_file,
     execute_tool,
+    get_backend,
     glob_tool,
     grep_tool,
     ls_tool,
     read_file,
     write_file,
 )
-from langclaw.langchain_api.tools.sandbox import get_backend
 
 FILESYSTEM_SYSTEM_PROMPT = """## Following Conventions
 
@@ -73,11 +71,11 @@ Here is a preview showing the head and tail of the result (lines of the form `..
 
 
 NUM_CHARS_PER_TOKEN = 4
-from langclaw.langchain_api.tools.sandbox import get_backend
-from langclaw.langchain_api.sandbox.open_sandbox import DOMAIN
 from langchain.agents.middleware import AgentState
-from opensandbox.sync.adapters.factory import AdapterFactorySync
 from opensandbox.config import ConnectionConfigSync
+from opensandbox.sync.adapters.factory import AdapterFactorySync
+
+from langclaw.langchain_api.sandbox.open_sandbox import DOMAIN
 
 
 def dict_merge(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:

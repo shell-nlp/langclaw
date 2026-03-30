@@ -13,7 +13,6 @@ from deepagents.middleware.filesystem import (
     DEFAULT_READ_OFFSET,
     EDIT_FILE_TOOL_DESCRIPTION,
     EXECUTE_TOOL_DESCRIPTION,
-    EditResult,
     GLOB_TOOL_DESCRIPTION,
     IMAGE_EXTENSIONS,
     IMAGE_MEDIA_TYPES,
@@ -22,6 +21,7 @@ from deepagents.middleware.filesystem import (
     READ_FILE_TOOL_DESCRIPTION,
     READ_FILE_TRUNCATION_MSG,
     WRITE_FILE_TOOL_DESCRIPTION,
+    EditResult,
     WriteResult,
     create_image_block,
 )
@@ -30,6 +30,7 @@ from langchain_core.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
 from langgraph.runtime import Runtime
 from langgraph.types import Command
+from loguru import logger
 from opensandbox.models.sandboxes import Host, Volume
 
 from langclaw.context import LangclawContext
@@ -74,24 +75,24 @@ def get_backend(
     state: dict | None = None,
 ) -> OpenSandbox:
     user_id = runtime.context.user_id
-    backend = None
-    if state:
-        sandbox_id_dict: dict = state.get("sandbox_id_dict", {})
+
+    # 优先使用传入的state，否则从runtime中获取
+    target_state = (
+        state
+        if state is not None
+        else (runtime.state if isinstance(runtime, ToolRuntime) else None)
+    )
+
+    if target_state:
+        sandbox_id_dict: dict = target_state.get("sandbox_id_dict", {})
         if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
             sandbox_id = sandbox_id_dict[user_id]
-            backend = get_existing_backend(sandbox_id)
-        else:  # 说明还没创建沙箱，需要创建
-            backend = get_new_backend(user_id)
-    elif isinstance(runtime, ToolRuntime):
-        sandbox_id_dict: dict = runtime.state.get("sandbox_id_dict", {})
-        if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
-            sandbox_id = sandbox_id_dict[user_id]
-            backend = get_existing_backend(sandbox_id)
-        else:  # 说明还没创建沙箱，需要创建
-            backend = get_new_backend(user_id)
-    else:
-        backend = get_new_backend(user_id)
-    return backend
+            logger.debug(f"get_existing_backend: sandbox_id={sandbox_id}")
+            return get_existing_backend(sandbox_id)
+
+    # 未找到沙箱ID或没有状态，创建新沙箱
+    logger.debug(f"get_new_backend: user_id={user_id}")
+    return get_new_backend(user_id)
 
 
 @tool("ls", description=LIST_FILES_TOOL_DESCRIPTION)

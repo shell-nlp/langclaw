@@ -3,18 +3,17 @@ from typing import Any
 
 from deepagents.backends import StateBackend
 from deepagents.backends.protocol import BackendFactory, BackendProtocol
-from deepagents.middleware.filesystem import FilesystemMiddleware
 from deepagents.middleware.memory import MemoryMiddleware
 from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
 
 # from deepagents.middleware.skills import SkillsMiddleware
-
 from deepagents.middleware.subagents import (
-    CompiledSubAgent,
     GENERAL_PURPOSE_SUBAGENT,
+    CompiledSubAgent,
     SubAgent,
     SubAgentMiddleware,
 )
+
 # from deepagents.middleware.summarization import create_summarization_middleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -34,7 +33,6 @@ from langgraph.cache.base import BaseCache
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
-
 
 BASE_AGENT_PROMPT = """You are a Deep Agent, an AI assistant that helps users accomplish tasks using tools. You respond with text and tool calls. The user can see your responses and tool outputs in real time.
 

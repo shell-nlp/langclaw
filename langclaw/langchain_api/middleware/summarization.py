@@ -12,7 +12,6 @@ from deepagents.middleware.summarization import (
 )
 
 from langclaw.langchain_api.tools.sandbox import get_backend
-from langclaw.langchain_api.tools.sandbox import get_backend
 
 logger = logging.getLogger(__name__)
 
