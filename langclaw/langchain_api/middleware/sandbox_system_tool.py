@@ -1,4 +1,4 @@
-from typing import cast, NotRequired
+from typing import cast, NotRequired, Annotated
 
 from deepagents.backends.utils import sanitize_tool_call_id
 from deepagents.middleware._utils import append_to_system_message
@@ -80,10 +80,17 @@ from opensandbox.sync.adapters.factory import AdapterFactorySync
 from opensandbox.config import ConnectionConfigSync
 
 
+def dict_merge(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
+    if left is None:
+        left = {}
+    result = left | right
+    return result
+
+
 class SandboxSystemToolState(AgentState):
     """沙箱系统工具中间件状态"""
 
-    sandbox_id: NotRequired[str]
+    sandbox_id_dict: NotRequired[Annotated[dict[str, str], dict_merge]]
 
 
 class SandboxSystemToolMiddleware(AgentMiddleware):
@@ -107,17 +114,15 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
         user_id = runtime.context.user_id
         backend = get_backend(runtime)
         sandbox_id = backend.sandbox.id
-        logger.warning(
-            f"Backend created for user {user_id} with sandbox id {sandbox_id}"
-        )
-        return {"sandbox_id": sandbox_id}
+        logger.warning(f"更新用户 {user_id} 的沙箱 ID 为 {sandbox_id}")
+        return {"sandbox_id_dict": {user_id: sandbox_id}}
 
     async def aafter_agent(self, state, runtime):
         config = ConnectionConfigSync(domain=DOMAIN)
         factory = AdapterFactorySync(config)
         sandbox_service = factory.create_sandbox_service()
         user_id = runtime.context.user_id
-        sandbox_id = state["sandbox_id"]
+        sandbox_id = state["sandbox_id_dict"][user_id]
         sandbox_service.kill_sandbox(sandbox_id)
         logger.warning(
             f"Backend killed for user {user_id} with sandbox id {sandbox_id}"

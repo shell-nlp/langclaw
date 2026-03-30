@@ -28,13 +28,12 @@ from deepagents.middleware.filesystem import (
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
+from langgraph.runtime import Runtime
 from langgraph.types import Command
 from opensandbox.models.sandboxes import Host, Volume
 
-from langclaw.langchain_api.sandbox.open_sandbox import OpenSandbox
-
-
 from langclaw.context import LangclawContext
+from langclaw.langchain_api.sandbox.open_sandbox import OpenSandbox
 
 workspace_path = "/home/dev/liuyu/project/langclaw/my_workspace"
 token_limit = 20000
@@ -47,10 +46,19 @@ def get_user_workspace_path(user_id: str) -> str:
     return str(new_workspace_path)
 
 
-def get_backend(runtime: ToolRuntime[LangclawContext, None]) -> OpenSandbox:
-    user_id = runtime.context.user_id
+def get_existing_backend(
+    sandbox_id: str,
+) -> OpenSandbox:
+    return OpenSandbox(
+        existing_sandbox_id=sandbox_id,
+    )
+
+
+def get_new_backend(
+    user_id: str,
+) -> OpenSandbox:
     workspace_path = get_user_workspace_path(user_id)
-    backend = OpenSandbox(
+    return OpenSandbox(
         volumes=[
             Volume(
                 name=f"langclaw-{user_id}",
@@ -59,6 +67,30 @@ def get_backend(runtime: ToolRuntime[LangclawContext, None]) -> OpenSandbox:
             )
         ]
     )
+
+
+def get_backend(
+    runtime: ToolRuntime[LangclawContext, None] | Runtime[LangclawContext],
+    state: dict | None = None,
+) -> OpenSandbox:
+    user_id = runtime.context.user_id
+    backend = None
+    if state:
+        sandbox_id_dict: dict = state.get("sandbox_id_dict", {})
+        if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
+            sandbox_id = sandbox_id_dict[user_id]
+            backend = get_existing_backend(sandbox_id)
+        else:  # 说明还没创建沙箱，需要创建
+            backend = get_new_backend(user_id)
+    elif isinstance(runtime, ToolRuntime):
+        sandbox_id_dict: dict = runtime.state.get("sandbox_id_dict", {})
+        if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
+            sandbox_id = sandbox_id_dict[user_id]
+            backend = get_existing_backend(sandbox_id)
+        else:  # 说明还没创建沙箱，需要创建
+            backend = get_new_backend(user_id)
+    else:
+        backend = get_new_backend(user_id)
     return backend
 
 

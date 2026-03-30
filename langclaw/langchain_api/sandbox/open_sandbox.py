@@ -30,20 +30,27 @@ class OpenSandbox(BaseSandbox):
         env: dict[str, str] = {"PYTHON_VERSION": "3.11"},
         timeout: int = 60 * 5,
         volumes: list[Volume] | None = None,
+        existing_sandbox_id: str | None = None,
     ):
-        self.env = env
-        self.timeout = timeout
-        self.volumes = volumes
+
         # 1. 配置连接信息
         self.config = ConnectionConfigSync(domain=DOMAIN)
-        self.sandbox = SandboxSync.create(
-            "gpu-server:180/opensandbox/code-interpreter:v1.0.1",
-            entrypoint=["/opt/opensandbox/code-interpreter.sh"],
-            env=self.env,
-            timeout=timedelta(seconds=timeout or self.timeout),
-            connection_config=self.config,
-            volumes=self.volumes,
-        )
+        if existing_sandbox_id:
+            self.sandbox = SandboxSync.connect(
+                sandbox_id=existing_sandbox_id, connection_config=self.config
+            )
+        else:
+            self.env = env
+            self.timeout = timeout
+            self.volumes = volumes
+            self.sandbox = SandboxSync.create(
+                "gpu-server:180/opensandbox/code-interpreter:v1.0.1",
+                entrypoint=["/opt/opensandbox/code-interpreter.sh"],
+                env=self.env,
+                timeout=timedelta(seconds=timeout or self.timeout),
+                connection_config=self.config,
+                volumes=self.volumes,
+            )
 
     def execute(self, command: str, *, timeout: int | None = None) -> ExecuteResponse:
         with self.sandbox:
