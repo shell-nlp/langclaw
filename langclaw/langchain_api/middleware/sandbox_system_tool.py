@@ -1,5 +1,4 @@
-import asyncio
-from typing import cast
+from typing import cast, NotRequired
 
 from deepagents.backends.utils import sanitize_tool_call_id
 from deepagents.middleware._utils import append_to_system_message
@@ -14,6 +13,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.runnables.config import var_child_runnable_config
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.types import Command
+from loguru import logger
 
 from langclaw.langchain_api.tools.sandbox import (
     edit_file,
@@ -73,6 +73,17 @@ Here is a preview showing the head and tail of the result (lines of the form `..
 
 
 NUM_CHARS_PER_TOKEN = 4
+from langclaw.langchain_api.tools.sandbox import get_backend
+from langclaw.langchain_api.sandbox.open_sandbox import DOMAIN
+from langchain.agents.middleware import AgentState
+from opensandbox.sync.adapters.factory import AdapterFactorySync
+from opensandbox.config import ConnectionConfigSync
+
+
+class SandboxSystemToolState(AgentState):
+    """沙箱系统工具中间件状态"""
+
+    sandbox_id: NotRequired[str]
 
 
 class SandboxSystemToolMiddleware(AgentMiddleware):
@@ -87,12 +98,30 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
         glob_tool,
         edit_file,
     ]
+    state_schema = SandboxSystemToolState
 
     def __init__(self, tool_token_limit_before_evict: int | None = 20000) -> None:
         self._tool_token_limit_before_evict = tool_token_limit_before_evict
 
-    def after_agent(self, state, runtime):
-        config: RunnableConfig = var_child_runnable_config.get()
+    async def abefore_agent(self, state, runtime):
+        user_id = runtime.context.user_id
+        backend = get_backend(runtime)
+        sandbox_id = backend.sandbox.id
+        logger.warning(
+            f"Backend created for user {user_id} with sandbox id {sandbox_id}"
+        )
+        return {"sandbox_id": sandbox_id}
+
+    async def aafter_agent(self, state, runtime):
+        config = ConnectionConfigSync(domain=DOMAIN)
+        factory = AdapterFactorySync(config)
+        sandbox_service = factory.create_sandbox_service()
+        user_id = runtime.context.user_id
+        sandbox_id = state["sandbox_id"]
+        sandbox_service.kill_sandbox(sandbox_id)
+        logger.warning(
+            f"Backend killed for user {user_id} with sandbox id {sandbox_id}"
+        )
         return None
 
     def wrap_model_call(
