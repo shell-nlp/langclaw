@@ -15,7 +15,7 @@ from deepagents.middleware.subagents import (
     SubAgent,
     SubAgentMiddleware,
 )
-from deepagents.middleware.summarization import create_summarization_middleware
+# from deepagents.middleware.summarization import create_summarization_middleware
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
@@ -136,7 +136,8 @@ def create_deep_agent(
     from langclaw.langchain_api.middleware.skills import (
         LangclawSkillsMiddleware as SkillsMiddleware,
     )
-
+    from langclaw.langchain_api.middleware.summarization import create_summarization_middleware
+    
     skills = ["/.langclaw/workspace/skills/"]
 
     backend = backend if backend is not None else (StateBackend)
