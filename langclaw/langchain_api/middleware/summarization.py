@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from re import S
 import warnings
 
 from deepagents.middleware.summarization import (
@@ -42,7 +43,7 @@ def create_summarization_middleware(
 class LangClawSummarizationMiddleware(SummarizationMiddleware):
 
     def _get_backend(self, state, runtime):
-        backend = get_backend(runtime)
+        backend = get_backend(runtime, state)
         return backend
 
     def wrap_model_call(
@@ -123,7 +124,7 @@ class LangClawSummarizationMiddleware(SummarizationMiddleware):
         # Modify request to use summarized messages
         modified_messages = [*new_messages, *preserved_messages]
         response = handler(request.override(messages=modified_messages))
-        backend.sandbox.kill()
+        # backend.sandbox.kill()
         # Return ExtendedModelResponse with state update
         return ExtendedModelResponse(
             model_response=response,

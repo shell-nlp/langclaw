@@ -113,7 +113,7 @@ def ls_tool(
     infos = backend.ls_info(path=validated_path)
     paths = [fi.get("path", "") for fi in infos]
     result = truncate_if_too_long(paths)
-    backend.sandbox.kill()
+    # backend.sandbox.kill()
     return str(result)
 
 
@@ -138,7 +138,7 @@ def execute_tool(
 
     if result.truncated:
         parts.append("\n[Output was truncated due to size limits]")
-    resolved_backend.sandbox.kill()
+    # resolved_backend.sandbox.kill()
     return "".join(parts)
 
 
@@ -169,7 +169,7 @@ def read_file(
         if responses and responses[0].content is not None:
             media_type = IMAGE_MEDIA_TYPES.get(ext, "image/png")
             image_b64 = base64.standard_b64encode(responses[0].content).decode("utf-8")
-            backend.sandbox.kill()
+            # backend.sandbox.kill()
             return ToolMessage(
                 content_blocks=[
                     create_image_block(base64=image_b64, mime_type=media_type)
@@ -199,7 +199,7 @@ def read_file(
         max_content_length = NUM_CHARS_PER_TOKEN * token_limit - len(truncation_msg)
         result = result[:max_content_length]
         result += truncation_msg
-    backend.sandbox.kill()
+    # backend.sandbox.kill()
     return result
 
 
@@ -224,7 +224,7 @@ def write_file(
     if res.error:
         return res.error
     # If backend returns state update, wrap into Command with ToolMessage
-    backend.sandbox.kill()
+    # backend.sandbox.kill()
     if res.files_update is not None:
         return Command(
             update={
@@ -268,7 +268,7 @@ def edit_file(
     res: EditResult = resolved_backend.edit(
         validated_path, old_string, new_string, replace_all=replace_all
     )
-    resolved_backend.sandbox.kill()
+    # resolved_backend.sandbox.kill()
     if res.error:
         return res.error
     if res.files_update is not None:
@@ -312,7 +312,7 @@ def glob_tool(
             return f"Error: glob timed out after {GLOB_TIMEOUT}s. Try a more specific pattern or a narrower path."
     paths = [fi.get("path", "") for fi in infos]
     result = truncate_if_too_long(paths)
-    resolved_backend.sandbox.kill()
+    # resolved_backend.sandbox.kill()
     return str(result)
 
 
@@ -339,5 +339,5 @@ def grep_tool(
         return raw
     formatted = format_grep_matches(raw, output_mode)
     result = truncate_if_too_long(formatted)
-    resolved_backend.sandbox.kill()
+    # resolved_backend.sandbox.kill()
     return result

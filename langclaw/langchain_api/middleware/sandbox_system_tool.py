@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated, NotRequired, cast
 
 from deepagents.backends.utils import sanitize_tool_call_id
@@ -8,6 +9,7 @@ from deepagents.middleware.filesystem import (
     _extract_text_from_message,
 )
 from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentState
 from langchain.tools import ToolRuntime
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
@@ -71,11 +73,6 @@ Here is a preview showing the head and tail of the result (lines of the form `..
 
 
 NUM_CHARS_PER_TOKEN = 4
-from langchain.agents.middleware import AgentState
-from opensandbox.config import ConnectionConfigSync
-from opensandbox.sync.adapters.factory import AdapterFactorySync
-
-from langclaw.langchain_api.sandbox.open_sandbox import DOMAIN
 
 
 def dict_merge(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
@@ -108,24 +105,27 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
     def __init__(self, tool_token_limit_before_evict: int | None = 20000) -> None:
         self._tool_token_limit_before_evict = tool_token_limit_before_evict
 
-    async def abefore_agent(self, state, runtime):
+    def before_agent(self, state, runtime):
         user_id = runtime.context.user_id
         backend = get_backend(runtime, state)
         sandbox_id = backend.sandbox.id
         return {"sandbox_id_dict": {user_id: sandbox_id}}
 
-    async def aafter_agent(self, state, runtime):
-        # config = ConnectionConfigSync(domain=DOMAIN)
-        # factory = AdapterFactorySync(config)
-        # sandbox_service = factory.create_sandbox_service()
+    async def abefore_agent(self, state, runtime):
+        return await asyncio.to_thread(self.before_agent, state, runtime)
+
+    def after_agent(self, state, runtime):
+        """目的：在代理执行完成后，统一杀死用户的沙箱环境"""
+
         user_id = runtime.context.user_id
-        # sandbox_id = state["sandbox_id_dict"][user_id]
         backend = get_backend(runtime, state)
         sandbox_id = backend.sandbox.id
         backend.sandbox.kill()
-        # sandbox_service.kill_sandbox(sandbox_id)
         logger.warning(f"用户 **{user_id}** 的沙箱 ID 为 {sandbox_id} 已被杀死")
         return None
+
+    async def aafter_agent(self, state, runtime):
+        return await asyncio.to_thread(self.after_agent, state, runtime)
 
     def wrap_model_call(
         self,

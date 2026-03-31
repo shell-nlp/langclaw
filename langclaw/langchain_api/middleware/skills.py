@@ -14,7 +14,7 @@ class LangclawSkillsMiddleware(SkillsMiddleware):
     """Langclaw技能中间件"""
 
     def _get_backend(self, state, runtime, config):
-        backend = get_backend(runtime)
+        backend = get_backend(runtime, state)
         return backend
 
     def before_agent(self, state, runtime, config):
@@ -33,7 +33,7 @@ class LangclawSkillsMiddleware(SkillsMiddleware):
                 all_skills[skill["name"]] = skill
 
         skills = list(all_skills.values())
-        backend.sandbox.kill()
+        # backend.sandbox.kill()
         return SkillsStateUpdate(skills_metadata=skills)
 
     async def abefore_agent(self, state, runtime, config):

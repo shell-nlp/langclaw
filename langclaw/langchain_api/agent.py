@@ -134,8 +134,10 @@ def create_deep_agent(
     from langclaw.langchain_api.middleware.skills import (
         LangclawSkillsMiddleware as SkillsMiddleware,
     )
-    from langclaw.langchain_api.middleware.summarization import create_summarization_middleware
-    
+    from langclaw.langchain_api.middleware.summarization import (
+        create_summarization_middleware,
+    )
+
     skills = ["/.langclaw/workspace/skills/"]
 
     backend = backend if backend is not None else (StateBackend)
@@ -145,7 +147,9 @@ def create_deep_agent(
         TodoListMiddleware(),
         # FilesystemMiddleware(backend=backend),
         SandboxSystemToolMiddleware(),
-        create_summarization_middleware(model, backend),
+        create_summarization_middleware(
+            model, backend
+        ),  # 这个是自己的摘要中间件,backend 实则使用自己的后端
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
         PatchToolCallsMiddleware(),
     ]
@@ -206,10 +210,6 @@ def create_deep_agent(
     deepagent_middleware: list[AgentMiddleware[Any, Any, Any]] = [
         TodoListMiddleware(),
     ]
-    if memory is not None:
-        deepagent_middleware.append(MemoryMiddleware(backend=backend, sources=memory))
-    if skills is not None:
-        deepagent_middleware.append(SkillsMiddleware(backend=backend, sources=skills))
     deepagent_middleware.extend(
         [
             # FilesystemMiddleware(backend=backend),
@@ -223,7 +223,10 @@ def create_deep_agent(
             PatchToolCallsMiddleware(),
         ]
     )
-
+    if memory is not None:
+        deepagent_middleware.append(MemoryMiddleware(backend=backend, sources=memory))
+    if skills is not None:
+        deepagent_middleware.append(SkillsMiddleware(backend=backend, sources=skills))
     if middleware:
         deepagent_middleware.extend(middleware)
     if interrupt_on is not None:
