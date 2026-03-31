@@ -110,21 +110,21 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
 
     async def abefore_agent(self, state, runtime):
         user_id = runtime.context.user_id
-        backend = get_backend(runtime)
+        backend = get_backend(runtime, state)
         sandbox_id = backend.sandbox.id
-        logger.warning(f"更新用户 {user_id} 的沙箱 ID 为 {sandbox_id}")
         return {"sandbox_id_dict": {user_id: sandbox_id}}
 
     async def aafter_agent(self, state, runtime):
-        config = ConnectionConfigSync(domain=DOMAIN)
-        factory = AdapterFactorySync(config)
-        sandbox_service = factory.create_sandbox_service()
+        # config = ConnectionConfigSync(domain=DOMAIN)
+        # factory = AdapterFactorySync(config)
+        # sandbox_service = factory.create_sandbox_service()
         user_id = runtime.context.user_id
-        sandbox_id = state["sandbox_id_dict"][user_id]
-        sandbox_service.kill_sandbox(sandbox_id)
-        logger.warning(
-            f"Backend killed for user {user_id} with sandbox id {sandbox_id}"
-        )
+        # sandbox_id = state["sandbox_id_dict"][user_id]
+        backend = get_backend(runtime, state)
+        sandbox_id = backend.sandbox.id
+        backend.sandbox.kill()
+        # sandbox_service.kill_sandbox(sandbox_id)
+        logger.warning(f"用户 **{user_id}** 的沙箱 ID 为 {sandbox_id} 已被杀死")
         return None
 
     def wrap_model_call(
