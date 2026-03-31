@@ -35,7 +35,6 @@ from langchain.agents.middleware import AgentMiddleware, AgentState
 from langchain.tools import ToolRuntime
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool
-from langgraph.prebuilt.tool_node import ToolRuntime
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 from loguru import logger
@@ -90,10 +89,7 @@ Here is a preview showing the head and tail of the result (lines of the form `..
 """
 
 
-NUM_CHARS_PER_TOKEN = 4
-
-
-workspace_path = "/home/dev/liuyu/project/langclaw/my_workspace"
+workspace_path = Path(__file__).parent.parent.parent.parent / "my_workspace"
 token_limit = 20000
 GLOB_TIMEOUT = 20.0  # seconds
 

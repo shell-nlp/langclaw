@@ -33,9 +33,7 @@ def deferred_tool_search(deferred_tool: list[dict], query: str) -> list[dict]:
     if query.startswith("+"):
         parts = query[1:].split(None, 1)
         required = parts[0].lower()
-        candidates = [
-            tool for tool in deferred_tool if required in tool["name"].lower()
-        ]
+        candidates = [tool for tool in deferred_tool if required in tool["name"].lower()]
         if len(parts) > 1:
             candidates.sort(
                 key=lambda tool: _regex_score(parts[1], tool),
@@ -84,9 +82,7 @@ def tool_search(query: str, runtime: ToolRuntime) -> dict:
 
     return Command(
         update={
-            "messages": [
-                ToolMessage(content=str(tool_defs), tool_call_id=runtime.tool_call_id)
-            ],
+            "messages": [ToolMessage(content=str(tool_defs), tool_call_id=runtime.tool_call_id)],
         }
     )
 
@@ -100,31 +96,22 @@ class DeferredToolMiddleware(AgentMiddleware):
     def wrap_model_call(self, request, handler):
         state = request.state
         current_tools = request.tools  # 原始是有全部的工具
-        current_tool_names = [
-            tool.name for tool in current_tools if tool.name != tool_search.name
-        ]
-        deferred_tool_prompt = f"\n<available-deferred-tools>\n{'\n'.join(current_tool_names)}\n</available-deferred-tools>\n"
+        current_tool_names = [tool.name for tool in current_tools if tool.name != tool_search.name]
+        available_deferred_tools = "\n".join(current_tool_names)
+        deferred_tool_prompt = f"\n<available-deferred-tools>\n{available_deferred_tools}\n</available-deferred-tools>\n"
         new_system_prpmpt = request.system_prompt + deferred_tool_prompt
         deferred_tool = state.get("deferred_tool", None)
         update = None
         if deferred_tool is None:
-            deferred_tools = [
-                tool for tool in current_tools if tool.name != tool_search.name
-            ]
+            deferred_tools = [tool for tool in current_tools if tool.name != tool_search.name]
 
             logger.info(f"添加 {len(deferred_tools)} 个延迟工具到状态")
-            request = request.override(
-                system_prompt=new_system_prpmpt, tools=[tool_search]
-            )
+            request = request.override(system_prompt=new_system_prpmpt, tools=[tool_search])
             update = {
-                "deferred_tool": [
-                    convert_to_openai_function(tool) for tool in deferred_tools
-                ]
+                "deferred_tool": [convert_to_openai_function(tool) for tool in deferred_tools]
             }
         else:
-            request = request.override(
-                system_prompt=new_system_prpmpt, tools=[tool_search]
-            )
+            request = request.override(system_prompt=new_system_prpmpt, tools=[tool_search])
         return ExtendedModelResponse(
             model_response=handler(request),
             command=Command(update=update),
@@ -133,31 +120,22 @@ class DeferredToolMiddleware(AgentMiddleware):
     async def awrap_model_call(self, request, handler):
         state = request.state
         current_tools = request.tools  # 原始是有全部的工具
-        current_tool_names = [
-            tool.name for tool in current_tools if tool.name != tool_search.name
-        ]
-        deferred_tool_prompt = f"\n<available-deferred-tools>\n{'\n'.join(current_tool_names)}\n</available-deferred-tools>\n"
+        current_tool_names = [tool.name for tool in current_tools if tool.name != tool_search.name]
+        available_deferred_tools = "\n".join(current_tool_names)
+        deferred_tool_prompt = f"\n<available-deferred-tools>\n{available_deferred_tools}\n</available-deferred-tools>\n"
         new_system_prpmpt = request.system_prompt + deferred_tool_prompt
         deferred_tool = state.get("deferred_tool", None)
         update = None
         if deferred_tool is None:
-            deferred_tools = [
-                tool for tool in current_tools if tool.name != tool_search.name
-            ]
+            deferred_tools = [tool for tool in current_tools if tool.name != tool_search.name]
 
             logger.info(f"添加 {len(deferred_tools)} 个延迟工具到状态")
-            request = request.override(
-                system_prompt=new_system_prpmpt, tools=[tool_search]
-            )
+            request = request.override(system_prompt=new_system_prpmpt, tools=[tool_search])
             update = {
-                "deferred_tool": [
-                    convert_to_openai_function(tool) for tool in deferred_tools
-                ]
+                "deferred_tool": [convert_to_openai_function(tool) for tool in deferred_tools]
             }
         else:
-            request = request.override(
-                system_prompt=new_system_prpmpt, tools=[tool_search]
-            )
+            request = request.override(system_prompt=new_system_prpmpt, tools=[tool_search])
         return ExtendedModelResponse(
             model_response=await handler(request),
             command=Command(update=update),

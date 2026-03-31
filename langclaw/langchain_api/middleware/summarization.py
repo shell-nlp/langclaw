@@ -40,7 +40,6 @@ def create_summarization_middleware(
 
 
 class LangClawSummarizationMiddleware(SummarizationMiddleware):
-
     def _get_backend(self, state, runtime):
         backend = get_backend(runtime, state)
         return backend
@@ -68,9 +67,7 @@ class LangClawSummarizationMiddleware(SummarizationMiddleware):
             else truncated_messages
         )
         try:
-            total_tokens = self.token_counter(
-                counted_messages, tools=request.tools
-            )  # ty: ignore[unknown-argument]
+            total_tokens = self.token_counter(counted_messages, tools=request.tools)  # ty: ignore[unknown-argument]
         except TypeError:
             total_tokens = self.token_counter(counted_messages)
         should_summarize = self._should_summarize(truncated_messages, total_tokens)
@@ -152,9 +149,7 @@ class LangClawSummarizationMiddleware(SummarizationMiddleware):
             else truncated_messages
         )
         try:
-            total_tokens = self.token_counter(
-                counted_messages, tools=request.tools
-            )  # ty: ignore[unknown-argument]
+            total_tokens = self.token_counter(counted_messages, tools=request.tools)  # ty: ignore[unknown-argument]
         except TypeError:
             total_tokens = self.token_counter(counted_messages)
         should_summarize = self._should_summarize(truncated_messages, total_tokens)
