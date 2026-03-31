@@ -20,6 +20,7 @@ Features:
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,8 @@ class SlackChannel(BaseChannel):
         self._reaction_tracking: dict[str, tuple[str, str]] = {}  # context_id -> (channel, ts)
         # In-memory cache for user_id -> username to avoid rate-limiting users_info
         self._user_cache: dict[str, str] = {}
+        # Bot user ID for stripping mentions from app_mention events
+        self._bot_user_id: str | None = None
 
     def is_enabled(self) -> bool:
         return (
@@ -96,6 +99,13 @@ class SlackChannel(BaseChannel):
         # Initialize Slack app
         app = AsyncApp(token=self._config.bot_token)
         self._app = app
+
+        # Fetch bot user ID for mention stripping
+        try:
+            auth_response = await app.client.auth_test()
+            self._bot_user_id = auth_response.get("user_id")
+        except Exception as exc:
+            logger.warning(f"Failed to fetch bot user ID: {exc}")
 
         # Register event handlers
         @app.event("message")
@@ -310,6 +320,10 @@ class SlackChannel(BaseChannel):
         # DMs don't need thread replies; channel mentions always reply in thread
         is_dm = event.get("channel_type") == "im"
         thread_ts = None if is_dm else (event.get("thread_ts") or event.get("ts"))
+
+        # Strip bot mention markup from app_mention events
+        if self._bot_user_id:
+            text = re.sub(rf"<@{re.escape(self._bot_user_id)}>\s*", "", text).strip()
 
         if not user_id or not channel_id:
             logger.debug("Slack message dropped: incomplete event data")
