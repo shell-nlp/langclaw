@@ -1,30 +1,48 @@
 import asyncio
-from typing import Annotated, NotRequired, cast
+import base64
+import concurrent.futures
+from pathlib import Path
+from typing import Annotated, Literal, NotRequired, cast
 
-from deepagents.backends.utils import sanitize_tool_call_id
+from deepagents.backends.utils import (
+    format_grep_matches,
+    sanitize_tool_call_id,
+    truncate_if_too_long,
+    validate_path,
+)
 from deepagents.middleware._utils import append_to_system_message
 from deepagents.middleware.filesystem import (
+    DEFAULT_READ_LIMIT,
+    DEFAULT_READ_OFFSET,
+    EDIT_FILE_TOOL_DESCRIPTION,
+    EXECUTE_TOOL_DESCRIPTION,
+    GLOB_TOOL_DESCRIPTION,
+    IMAGE_EXTENSIONS,
+    IMAGE_MEDIA_TYPES,
+    LIST_FILES_TOOL_DESCRIPTION,
+    NUM_CHARS_PER_TOKEN,
+    READ_FILE_TOOL_DESCRIPTION,
+    READ_FILE_TRUNCATION_MSG,
+    WRITE_FILE_TOOL_DESCRIPTION,
+    EditResult,
+    WriteResult,
     _build_evicted_content,
     _create_content_preview,
     _extract_text_from_message,
+    create_image_block,
 )
-from langchain.agents.middleware import AgentMiddleware
-from langchain.agents.middleware import AgentState
+from langchain.agents.middleware import AgentMiddleware, AgentState
 from langchain.tools import ToolRuntime
 from langchain_core.messages import ToolMessage
+from langchain_core.tools import tool
+from langgraph.prebuilt.tool_node import ToolRuntime
+from langgraph.runtime import Runtime
 from langgraph.types import Command
 from loguru import logger
+from opensandbox.models.sandboxes import Host, Volume
 
-from langclaw.langchain_api.tools.sandbox import (
-    edit_file,
-    execute_tool,
-    get_backend,
-    glob_tool,
-    grep_tool,
-    ls_tool,
-    read_file,
-    write_file,
-)
+from langclaw.context import LangclawContext
+from langclaw.langchain_api.sandbox.open_sandbox import OpenSandbox
 
 FILESYSTEM_SYSTEM_PROMPT = """## Following Conventions
 
@@ -73,6 +91,301 @@ Here is a preview showing the head and tail of the result (lines of the form `..
 
 
 NUM_CHARS_PER_TOKEN = 4
+
+
+workspace_path = "/home/dev/liuyu/project/langclaw/my_workspace"
+token_limit = 20000
+GLOB_TIMEOUT = 20.0  # seconds
+
+
+def get_user_workspace_path(user_id: str) -> str:
+    new_workspace_path = Path(f"{workspace_path}/{user_id}/.langclaw")
+    new_workspace_path.mkdir(parents=True, exist_ok=True)
+    return str(new_workspace_path)
+
+
+def get_existing_backend(
+    sandbox_id: str,
+) -> OpenSandbox:
+    return OpenSandbox(
+        existing_sandbox_id=sandbox_id,
+    )
+
+
+def get_new_backend(
+    user_id: str,
+) -> OpenSandbox:
+    workspace_path = get_user_workspace_path(user_id)
+    return OpenSandbox(
+        volumes=[
+            Volume(
+                name=f"langclaw-{user_id}",
+                host=Host(path=workspace_path),
+                mount_path="/.langclaw",
+            )
+        ]
+    )
+
+
+def get_backend(
+    runtime: ToolRuntime[LangclawContext, None] | Runtime[LangclawContext],
+    state: dict | None = None,
+) -> OpenSandbox:
+    user_id = runtime.context.user_id
+
+    # 优先使用传入的state，否则从runtime中获取
+    target_state = (
+        state
+        if state is not None
+        else (runtime.state if isinstance(runtime, ToolRuntime) else None)
+    )
+
+    if target_state:
+        sandbox_id_dict: dict = target_state.get("sandbox_id_dict", {})
+        if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
+            sandbox_id = sandbox_id_dict[user_id]
+            logger.warning(f"得到用户 **{user_id}** 已存在的沙箱 ID: {sandbox_id}")
+            return get_existing_backend(sandbox_id)
+
+    # 未找到沙箱ID或没有状态，创建新沙箱
+    backend = get_new_backend(user_id)
+    logger.warning(f"创建用户 **{user_id}** 新沙箱, 沙箱 ID 为 {backend.sandbox.id}")
+    return backend
+
+
+@tool("ls", description=LIST_FILES_TOOL_DESCRIPTION)
+def ls_tool(
+    path: Annotated[str, "Absolute path to the directory to list. Must be absolute, not relative."],
+    runtime: ToolRuntime[LangclawContext, None],
+):
+    """列出当前目录下的文件"""
+    backend = get_backend(runtime)
+    try:
+        validated_path = validate_path(path)
+    except ValueError as e:
+        return f"Error: {e}"
+
+    infos = backend.ls_info(path=validated_path)
+    paths = [fi.get("path", "") for fi in infos]
+    result = truncate_if_too_long(paths)
+    # backend.sandbox.kill()
+    return str(result)
+
+
+@tool("execute", description=EXECUTE_TOOL_DESCRIPTION)
+def execute_tool(
+    command: Annotated[str, "Shell command to execute in the sandbox environment."],
+    runtime: ToolRuntime[LangclawContext, None],
+    timeout: Annotated[
+        int | None,
+        "Optional timeout in seconds for this command. Overrides the default timeout. Use 0 for no-timeout execution on backends that support it.",
+    ] = None,
+):
+    """执行命令并返回结果"""
+    resolved_backend = get_backend(runtime)
+    result = resolved_backend.execute(command)
+    # Format output for LLM consumption
+    parts = [result.output]
+
+    if result.exit_code is not None:
+        status = "succeeded" if result.exit_code == 0 else "failed"
+        parts.append(f"\n[Command {status} with exit code {result.exit_code}]")
+
+    if result.truncated:
+        parts.append("\n[Output was truncated due to size limits]")
+    # resolved_backend.sandbox.kill()
+    return "".join(parts)
+
+
+@tool("read_file", description=READ_FILE_TOOL_DESCRIPTION)
+def read_file(
+    file_path: Annotated[str, "Absolute path to the file to read. Must be absolute, not relative."],
+    runtime: ToolRuntime[LangclawContext, None],
+    offset: Annotated[
+        int,
+        "Line number to start reading from (0-indexed). Use for pagination of large files.",
+    ] = DEFAULT_READ_OFFSET,
+    limit: Annotated[
+        int, "Maximum number of lines to read. Use for pagination of large files."
+    ] = DEFAULT_READ_LIMIT,
+):
+    """读取文件内容"""
+    backend = get_backend(runtime)
+    try:
+        validated_path = validate_path(file_path)
+    except ValueError as e:
+        return f"Error: {e}"
+
+    ext = Path(validated_path).suffix.lower()
+    if ext in IMAGE_EXTENSIONS:
+        responses = backend.download_files([validated_path])
+        if responses and responses[0].content is not None:
+            media_type = IMAGE_MEDIA_TYPES.get(ext, "image/png")
+            image_b64 = base64.standard_b64encode(responses[0].content).decode("utf-8")
+            # backend.sandbox.kill()
+            return ToolMessage(
+                content_blocks=[create_image_block(base64=image_b64, mime_type=media_type)],
+                name="read_file",
+                tool_call_id=runtime.tool_call_id,
+                additional_kwargs={
+                    "read_file_path": validated_path,
+                    "read_file_media_type": media_type,
+                },
+            )
+        if responses and responses[0].error:
+            return f"Error reading image: {responses[0].error}"
+        return "Error reading image: unknown error"
+
+    result = backend.read(validated_path, offset=offset, limit=limit)
+
+    lines = result.splitlines(keepends=True)
+    if len(lines) > limit:
+        lines = lines[:limit]
+        result = "".join(lines)
+
+    # Check if result exceeds token threshold and truncate if necessary
+    if token_limit and len(result) >= NUM_CHARS_PER_TOKEN * token_limit:
+        # Calculate truncation message length to ensure final result stays under threshold
+        truncation_msg = READ_FILE_TRUNCATION_MSG.format(file_path=validated_path)
+        max_content_length = NUM_CHARS_PER_TOKEN * token_limit - len(truncation_msg)
+        result = result[:max_content_length]
+        result += truncation_msg
+    # backend.sandbox.kill()
+    return result
+
+
+@tool("write_file", description=WRITE_FILE_TOOL_DESCRIPTION)
+def write_file(
+    file_path: Annotated[
+        str,
+        "Absolute path where the file should be created. Must be absolute, not relative.",
+    ],
+    content: Annotated[str, "The text content to write to the file. This parameter is required."],
+    runtime: ToolRuntime[LangclawContext, None],
+):
+    """写入文件内容"""
+    backend = get_backend(runtime)
+    try:
+        validated_path = validate_path(file_path)
+    except ValueError as e:
+        return f"Error: {e}"
+    res: WriteResult = backend.write(validated_path, content)
+    if res.error:
+        return res.error
+    # If backend returns state update, wrap into Command with ToolMessage
+    # backend.sandbox.kill()
+    if res.files_update is not None:
+        return Command(
+            update={
+                "files": res.files_update,
+                "messages": [
+                    ToolMessage(
+                        content=f"Updated file {res.path}",
+                        tool_call_id=runtime.tool_call_id,
+                    )
+                ],
+            }
+        )
+    return f"Updated file {res.path}"
+
+
+@tool("edit_file", description=EDIT_FILE_TOOL_DESCRIPTION)
+def edit_file(
+    file_path: Annotated[str, "Absolute path to the file to edit. Must be absolute, not relative."],
+    old_string: Annotated[
+        str,
+        "The exact text to find and replace. Must be unique in the file unless replace_all is True.",
+    ],
+    new_string: Annotated[
+        str, "The text to replace old_string with. Must be different from old_string."
+    ],
+    runtime: ToolRuntime[LangclawContext, None],
+    *,
+    replace_all: Annotated[
+        bool,
+        "If True, replace all occurrences of old_string. If False (default), old_string must be unique.",
+    ] = False,
+):
+    """编辑文件内容"""
+    resolved_backend = get_backend(runtime)
+    try:
+        validated_path = validate_path(file_path)
+    except ValueError as e:
+        return f"Error: {e}"
+    res: EditResult = resolved_backend.edit(
+        validated_path, old_string, new_string, replace_all=replace_all
+    )
+    # resolved_backend.sandbox.kill()
+    if res.error:
+        return res.error
+    if res.files_update is not None:
+        return Command(
+            update={
+                "files": res.files_update,
+                "messages": [
+                    ToolMessage(
+                        content=f"Successfully replaced {res.occurrences} instance(s) of the string in '{res.path}'",
+                        tool_call_id=runtime.tool_call_id,
+                    )
+                ],
+            }
+        )
+    return f"Successfully replaced {res.occurrences} instance(s) of the string in '{res.path}'"
+
+
+@tool("glob", description=GLOB_TOOL_DESCRIPTION)
+def glob_tool(
+    pattern: str,
+    runtime: ToolRuntime[LangclawContext, None],
+    path: str = "/",
+):
+    """使用glob模式匹配文件"""
+    try:
+        validated_path = validate_path(path)
+    except ValueError as e:
+        return f"Error: {e}"
+    resolved_backend = get_backend(runtime)
+    try:
+        validated_path = validate_path(path)
+    except ValueError as e:
+        return f"Error: {e}"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(resolved_backend.glob_info, pattern, path=validated_path)
+        try:
+            infos = future.result(timeout=GLOB_TIMEOUT)
+        except concurrent.futures.TimeoutError:
+            return f"Error: glob timed out after {GLOB_TIMEOUT}s. Try a more specific pattern or a narrower path."
+    paths = [fi.get("path", "") for fi in infos]
+    result = truncate_if_too_long(paths)
+    # resolved_backend.sandbox.kill()
+    return str(result)
+
+
+@tool("grep", description=GLOB_TOOL_DESCRIPTION)
+def grep_tool(
+    pattern: Annotated[str, "Text pattern to search for (literal string, not regex)."],
+    runtime: ToolRuntime[LangclawContext, None],
+    path: Annotated[
+        str | None, "Directory to search in. Defaults to current working directory."
+    ] = None,
+    glob: Annotated[
+        str | None, "Glob pattern to filter which files to search (e.g., '*.py')."
+    ] = None,
+    output_mode: Annotated[
+        Literal["files_with_matches", "content", "count"],
+        "Output format: 'files_with_matches' (file paths only, default), 'content' (matching lines with context), 'count' (match counts per file).",
+    ] = "files_with_matches",
+):
+    """使用grep模式搜索文件内容"""
+
+    resolved_backend = get_backend(runtime)
+    raw = resolved_backend.grep_raw(pattern, path=path, glob=glob)
+    if isinstance(raw, str):
+        return raw
+    formatted = format_grep_matches(raw, output_mode)
+    result = truncate_if_too_long(formatted)
+    # resolved_backend.sandbox.kill()
+    return result
 
 
 def dict_merge(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
@@ -134,9 +447,7 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
     ):
         prompt_parts = [FILESYSTEM_SYSTEM_PROMPT, EXECUTION_SYSTEM_PROMPT]
         system_prompt = "\n\n".join(prompt_parts).strip()
-        new_system_message = append_to_system_message(
-            request.system_message, system_prompt
-        )
+        new_system_message = append_to_system_message(request.system_message, system_prompt)
         request = request.override(system_message=new_system_message)
         return handler(request)
 
@@ -175,10 +486,7 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
         content_str = _extract_text_from_message(message)
 
         # Check if content exceeds eviction threshold
-        if (
-            len(content_str)
-            <= NUM_CHARS_PER_TOKEN * self._tool_token_limit_before_evict
-        ):
+        if len(content_str) <= NUM_CHARS_PER_TOKEN * self._tool_token_limit_before_evict:
             return message, None
 
         # Write content to filesystem

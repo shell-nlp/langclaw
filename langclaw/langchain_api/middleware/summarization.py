@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from re import S
 import warnings
 
 from deepagents.middleware.summarization import (
@@ -12,7 +11,7 @@ from deepagents.middleware.summarization import (
     compute_summarization_defaults,
 )
 
-from langclaw.langchain_api.tools.sandbox import get_backend
+from langclaw.langchain_api.middleware.sandbox_system_tool import get_backend
 
 logger = logging.getLogger(__name__)
 

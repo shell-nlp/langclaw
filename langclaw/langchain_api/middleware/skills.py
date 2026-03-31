@@ -7,7 +7,7 @@ from deepagents.middleware.skills import (
     _list_skills,
 )
 
-from langclaw.langchain_api.tools.sandbox import get_backend
+from langclaw.langchain_api.middleware.sandbox_system_tool import get_backend
 
 
 class LangclawSkillsMiddleware(SkillsMiddleware):
