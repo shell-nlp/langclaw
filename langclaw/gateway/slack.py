@@ -19,6 +19,7 @@ Features:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from pathlib import Path
@@ -394,6 +395,11 @@ class SlackChannel(BaseChannel):
         # -- Attachment handling --
         from langclaw.bus.base import Attachment
 
+        try:
+            import aiohttp
+        except ImportError:
+            aiohttp = None  # type: ignore
+
         content_parts = [text] if text else []
         msg_attachments: list[Attachment] = []
         media_dir = Path.home() / ".langclaw" / "media"
@@ -414,14 +420,13 @@ class SlackChannel(BaseChannel):
 
                 # Get download URL (private URL requires auth)
                 url_private = file_info.get("url_private")
-                if url_private and self._app:
-                    import aiohttp
-
+                if url_private and self._app and aiohttp:
                     headers = {"Authorization": f"Bearer {self._config.bot_token}"}
                     async with aiohttp.ClientSession() as session:
                         async with session.get(url_private, headers=headers) as resp:
                             if resp.status == 200:
-                                file_path.write_bytes(await resp.read())
+                                data = await resp.read()
+                                await asyncio.to_thread(file_path.write_bytes, data)
                                 msg_attachments.append(
                                     make_attachment(
                                         file_path=file_path,
