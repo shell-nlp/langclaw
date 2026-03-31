@@ -41,7 +41,7 @@ from loguru import logger
 from opensandbox.models.sandboxes import Host, Volume
 
 from langclaw.context import LangclawContext
-from langclaw.langchain_api.sandbox.open_sandbox import OpenSandbox
+from langclaw.langchain_api.backend.open_sandbox import OpenSandbox
 
 FILESYSTEM_SYSTEM_PROMPT = """## Following Conventions
 
