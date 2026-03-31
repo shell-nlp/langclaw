@@ -441,11 +441,19 @@ class SlackChannel(BaseChannel):
                 file_name = file_info.get("name", "file")
                 content_parts.append(f"[attachment: {file_name} - download failed]")
 
+        # Thread-scoped context for channels, channel-scoped for DMs
+        if is_dm:
+            context_id = channel_id
+        elif thread_ts:
+            context_id = f"{channel_id}:{thread_ts}"
+        else:
+            context_id = f"{channel_id}:{message_ts}"
+
         await self._bus.publish(
             InboundMessage(
                 channel=self.name,
                 user_id=user_id,
-                context_id=channel_id,
+                context_id=context_id,
                 chat_id=channel_id,
                 content="\n".join(p for p in content_parts if p) or "[empty message]",
                 origin="channel",
