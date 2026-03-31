@@ -142,7 +142,9 @@ def get_backend(
 
     if target_state:
         sandbox_id_dict: dict = target_state.get("sandbox_id_dict", {})
-        if user_id in sandbox_id_dict:  # 说明已经创建好了沙箱，可以直接使用
+        if (
+            user_id in sandbox_id_dict and sandbox_id_dict[user_id] is not None
+        ):  # 说明已经创建好了沙箱，可以直接使用
             sandbox_id = sandbox_id_dict[user_id]
             logger.warning(f"得到用户 **{user_id}** 已存在的沙箱 ID: {sandbox_id}")
             return get_existing_backend(sandbox_id)
@@ -398,7 +400,7 @@ def dict_merge(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
 class SandboxSystemToolState(AgentState):
     """沙箱系统工具中间件状态"""
 
-    sandbox_id_dict: NotRequired[Annotated[dict[str, str], dict_merge]]
+    sandbox_id_dict: NotRequired[Annotated[dict[str, str | None], dict_merge]]
 
 
 class SandboxSystemToolMiddleware(AgentMiddleware):
@@ -435,7 +437,7 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
         sandbox_id = backend.sandbox.id
         backend.sandbox.kill()
         logger.warning(f"用户 **{user_id}** 的沙箱 ID 为 {sandbox_id} 已被杀死")
-        return None
+        return {"sandbox_id_dict": {user_id: None}}
 
     async def aafter_agent(self, state, runtime):
         return await asyncio.to_thread(self.after_agent, state, runtime)
