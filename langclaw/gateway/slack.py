@@ -12,6 +12,9 @@ Features:
 - Tool-progress / tool-result rendering with code-block formatting
 - Automatic reconnect on socket disconnects
 - File attachment support
+- Reaction emoji UX feedback (configurable):
+  * 👀 (eyes) when message is received → "I'm working on it"
+  * ✅ (checkmark) when response is sent → "done"
 """
 
 from __future__ import annotations
@@ -64,6 +67,8 @@ class SlackChannel(BaseChannel):
         self._bus: BaseMessageBus | None = None
         self._running = False
         self._tool_call_buffer: dict[str, dict] = {}
+        # Track (channel_id, message_ts) pairs for reaction management
+        self._reaction_tracking: dict[str, tuple[str, str]] = {}  # context_id -> (channel, ts)
 
     def is_enabled(self) -> bool:
         return (
@@ -112,7 +117,10 @@ class SlackChannel(BaseChannel):
             for entry in self._command_router.list_commands():
                 self._register_slash_command(app, entry.name, entry.description or entry.name)
 
-        logger.info("SlackChannel starting…")
+        logger.info(
+            f"SlackChannel starting… "
+            f"(reaction_feedback={'enabled' if self._config.reaction_feedback_enabled else 'disabled'})"
+        )
 
         # Start socket mode handler
         handler = AsyncSocketModeHandler(app, self._config.app_token)
@@ -185,6 +193,10 @@ class SlackChannel(BaseChannel):
         for chunk in split_message(msg.content, max_len=MAX_MESSAGE_LEN):
             await self._send_text(msg.chat_id, chunk, thread_ts=thread_ts)
 
+        # Update reaction: 👀 → ✅
+        if self._config.reaction_feedback_enabled:
+            await self._swap_reaction(msg.context_id)
+
     # ------------------------------------------------------------------
     # Sending helpers
     # ------------------------------------------------------------------
@@ -211,6 +223,70 @@ class SlackChannel(BaseChannel):
         except Exception as exc:
             logger.error(f"Failed to send Slack message: {exc}")
 
+    async def _add_reaction(self, channel: str, timestamp: str, emoji: str) -> None:
+        """Add a reaction emoji to a message."""
+        if not self._app:
+            return
+
+        try:
+            await self._app.client.reactions_add(
+                channel=channel,
+                timestamp=timestamp,
+                name=emoji,
+            )
+        except Exception as exc:
+            # Extract Slack API error code if available
+            slack_error = None
+            if hasattr(exc, "response") and isinstance(exc.response, dict):
+                slack_error = exc.response.get("error")
+
+            # Silently ignore common non-critical errors
+            if slack_error in ["already_reacted", "no_reaction"]:
+                return
+
+            # Log actionable errors
+            if slack_error == "missing_scope":
+                logger.warning(f"Reaction failed: missing 'reactions:write' scope")
+            else:
+                logger.debug(f"Failed to add reaction '{emoji}': {slack_error or exc}")
+
+    async def _remove_reaction(self, channel: str, timestamp: str, emoji: str) -> None:
+        """Remove a reaction emoji from a message."""
+        if not self._app:
+            return
+
+        try:
+            await self._app.client.reactions_remove(
+                channel=channel,
+                timestamp=timestamp,
+                name=emoji,
+            )
+        except Exception as exc:
+            # Extract Slack API error code if available
+            slack_error = None
+            if hasattr(exc, "response") and isinstance(exc.response, dict):
+                slack_error = exc.response.get("error")
+
+            # Silently ignore common non-critical errors
+            if slack_error in ["no_reaction", "already_reacted"]:
+                return
+
+            # Log actionable errors
+            if slack_error == "missing_scope":
+                logger.warning(f"Reaction failed: missing 'reactions:write' scope")
+            else:
+                logger.debug(f"Failed to remove reaction '{emoji}': {slack_error or exc}")
+
+    async def _swap_reaction(self, context_id: str) -> None:
+        """Swap processing reaction (👀) for complete reaction (✅)."""
+        tracking = self._reaction_tracking.pop(context_id, None)
+        if not tracking:
+            return
+
+        channel, timestamp = tracking
+        await self._remove_reaction(channel, timestamp, self._config.reaction_processing)
+        await self._add_reaction(channel, timestamp, self._config.reaction_complete)
+
     # ------------------------------------------------------------------
     # Inbound message handling
     # ------------------------------------------------------------------
@@ -224,6 +300,7 @@ class SlackChannel(BaseChannel):
         user_id = event.get("user", "")
         channel_id = event.get("channel", "")
         text = event.get("text", "")
+        message_ts = event.get("ts", "")
         # DMs don't need thread replies; channel mentions always reply in thread
         is_dm = event.get("channel_type") == "im"
         thread_ts = None if is_dm else (event.get("thread_ts") or event.get("ts"))
@@ -231,6 +308,11 @@ class SlackChannel(BaseChannel):
         if not user_id or not channel_id:
             logger.debug("Slack message dropped: incomplete event data")
             return
+
+        # Add 👀 reaction immediately to signal "processing"
+        if self._config.reaction_feedback_enabled and message_ts:
+            self._reaction_tracking[channel_id] = (channel_id, message_ts)
+            await self._add_reaction(channel_id, message_ts, self._config.reaction_processing)
 
         # Get user info for username
         username = ""
@@ -277,6 +359,10 @@ class SlackChannel(BaseChannel):
                     await self._send_text(channel_id, response, thread_ts=thread_ts)
                 except Exception as exc:
                     logger.error(f"Failed to send command response: {exc}")
+
+                # Update reaction: 👀 → ✅ for command responses
+                if self._config.reaction_feedback_enabled:
+                    await self._swap_reaction(channel_id)
                 return
 
         if self._bus is None:
@@ -340,7 +426,7 @@ class SlackChannel(BaseChannel):
                     "platform": "slack",
                     "username": username,
                     "thread_ts": thread_ts,
-                    "message_ts": event.get("ts"),
+                    "message_ts": message_ts,
                 },
             )
         )

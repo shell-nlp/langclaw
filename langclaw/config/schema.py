@@ -158,6 +158,12 @@ class SlackChannelConfig(BaseModel):
     user_roles: StringDict = Field(default_factory=dict)
     """Maps Slack user IDs to permission roles.
     Env format: ``U123456:admin,U789012:viewer``"""
+    reaction_feedback_enabled: bool = True
+    """Enable reaction emoji feedback (👀 while processing, ✅ when done)."""
+    reaction_processing: str = "eyes"
+    """Emoji name for 'processing' reaction. Default: 'eyes' (👀)."""
+    reaction_complete: str = "white_check_mark"
+    """Emoji name for 'complete' reaction. Default: 'white_check_mark' (✅)."""
 
 
 class ChannelsConfig(BaseModel):

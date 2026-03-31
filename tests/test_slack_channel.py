@@ -18,6 +18,9 @@ class TestSlackConfig:
         assert config.app_token == ""
         assert config.allow_from == []
         assert config.user_roles == {}
+        assert config.reaction_feedback_enabled is True
+        assert config.reaction_processing == "eyes"
+        assert config.reaction_complete == "white_check_mark"
 
     def test_slack_config_from_dict(self):
         """Test creating Slack config from dict."""
@@ -35,6 +38,22 @@ class TestSlackConfig:
         assert config.app_token == "xapp-test"
         assert config.allow_from == ["U123456"]
         assert config.user_roles == {"U123456": "admin"}
+
+    def test_slack_config_reaction_customization(self):
+        """Test custom reaction emoji configuration."""
+        from langclaw.config.schema import SlackChannelConfig
+
+        config = SlackChannelConfig(
+            enabled=True,
+            bot_token="xoxb-test",
+            app_token="xapp-test",
+            reaction_feedback_enabled=False,
+            reaction_processing="hourglass",
+            reaction_complete="tada",
+        )
+        assert config.reaction_feedback_enabled is False
+        assert config.reaction_processing == "hourglass"
+        assert config.reaction_complete == "tada"
 
 
 class TestSlackChannel:
