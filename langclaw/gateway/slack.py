@@ -147,6 +147,10 @@ class SlackChannel(BaseChannel):
             logger.error(f"Failed to start Slack Socket Mode: {exc}")
             raise
 
+        # Keep the task alive until cancelled (mirrors TelegramChannel pattern)
+        while self._running:
+            await asyncio.sleep(1)
+
     async def stop(self) -> None:
         self._running = False
         if self._handler is not None:
