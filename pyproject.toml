@@ -54,7 +54,7 @@ discord  = ["discord.py>=2"]
 websocket = [
     "websockets>=14",
 ]
-slack = ["slack-bolt>=1.18", "aiohttp>=3.8", "slackify-markdown>=2.0"]
+slack = ["slack-bolt>=1.18", "aiohttp>=3.8", "slackify-markdown>=0.2.0"]
 postgres = ["langgraph-checkpoint-postgres", "psycopg[binary,pool]"]
 rabbitmq = ["aio-pika>=9"]
 kafka    = ["aiokafka>=0.10"]
