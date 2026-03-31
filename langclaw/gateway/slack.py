@@ -202,8 +202,15 @@ class SlackChannel(BaseChannel):
         if not msg.content:
             return
 
+        try:
+            from slackify_markdown import slackify_markdown
+        except ImportError:
+            slackify_markdown = None  # type: ignore
+
         thread_ts = (msg.metadata or {}).get("thread_ts")
-        for chunk in split_message(msg.content, max_len=MAX_MESSAGE_LEN):
+        # Convert markdown to Slack's mrkdwn format
+        text = slackify_markdown(msg.content) if slackify_markdown else msg.content
+        for chunk in split_message(text, max_len=MAX_MESSAGE_LEN):
             await self._send_text(msg.chat_id, chunk, thread_ts=thread_ts)
 
         # Update reaction: 👀 → ✅
