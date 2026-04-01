@@ -146,10 +146,21 @@ class WebSocketChannelConfig(BaseModel):
     Env format: ``user1:admin,user2:viewer``"""
 
 
+class HttpChannelConfig(BaseModel):
+    enabled: bool = False
+    host: str = "127.0.0.1"
+    port: int = 18790
+    allow_from: StringList = Field(default_factory=list)
+    user_roles: StringDict = Field(default_factory=dict)
+    """Maps HTTP user IDs to permission roles.
+    Env format: ``user1:admin,user2:viewer``"""
+
+
 class ChannelsConfig(BaseModel):
     telegram: TelegramChannelConfig = Field(default_factory=TelegramChannelConfig)
     discord: DiscordChannelConfig = Field(default_factory=DiscordChannelConfig)
     websocket: WebSocketChannelConfig = Field(default_factory=WebSocketChannelConfig)
+    http: HttpChannelConfig = Field(default_factory=HttpChannelConfig)
 
 
 class AgentConfig(BaseModel):

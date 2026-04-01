@@ -505,6 +505,7 @@ class GatewayManager:
                                     "tool_call_id": tool_call_id,
                                     "tool": tool_name,
                                     "args": tc.get("args", {}),
+                                    **metadata,
                                 },
                             )
                         )
@@ -527,6 +528,7 @@ class GatewayManager:
                             metadata={
                                 "tool_call_id": tc_id,
                                 "tool": _tool_call_names.get(tc_id, m.name or ""),
+                                **metadata,
                             },
                         )
                     )
@@ -548,6 +550,7 @@ class GatewayManager:
                                 chat_id=msg.chat_id,
                                 content=raw,
                                 type="ai",
+                                metadata=metadata,
                             )
                         )
 

@@ -747,6 +747,16 @@ class Langclaw:
                     "Run: uv add 'langclaw[websocket]'"
                 )
 
+        if ch_cfg.http.enabled:
+            try:
+                from langclaw.gateway.http import HttpChannel
+
+                channels.append(HttpChannel(ch_cfg.http))
+            except ImportError:
+                logger.warning(
+                    "HTTP enabled but fastapi/uvicorn not installed. Run: uv add 'langclaw[http]'"
+                )
+
         channels.extend(self._extra_channels)
         return channels
 
