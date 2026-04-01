@@ -7,13 +7,11 @@ and outbound message delivery.
 
 from __future__ import annotations
 
-import asyncio
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from langclaw.bus.base import Attachment, InboundMessage, OutboundMessage
+from langclaw.bus.base import InboundMessage, OutboundMessage
 from langclaw.config.schema import SlackChannelConfig
 from langclaw.gateway.commands import CommandContext, CommandRouter
 from langclaw.gateway.slack import SlackChannel
@@ -55,9 +53,7 @@ def mock_slack_app():
     app.client.chat_postMessage = AsyncMock()
     app.client.reactions_add = AsyncMock()
     app.client.reactions_remove = AsyncMock()
-    app.client.users_info = AsyncMock(
-        return_value={"user": {"name": "testuser"}}
-    )
+    app.client.users_info = AsyncMock(return_value={"user": {"name": "testuser"}})
     return app
 
 
@@ -315,9 +311,7 @@ class TestAttachmentDownload:
     """Test attachment download functionality."""
 
     @pytest.mark.skip(reason="Complex async file I/O mocking - integration test recommended")
-    async def test_attachment_download_success(
-        self, slack_channel, mock_bus, mock_slack_app
-    ):
+    async def test_attachment_download_success(self, slack_channel, mock_bus, mock_slack_app):
         """Test successful attachment download.
 
         NOTE: This test requires complex mocking of async file I/O operations.
@@ -436,7 +430,7 @@ class TestSendAiMessage:
 
         await slack_channel.send_ai_message(msg)
 
-        # Verify message was sent (content may or may not be converted depending on slackify_markdown availability)
+        # Verify message was sent (content conversion depends on slackify_markdown availability)
         mock_slack_app.client.chat_postMessage.assert_called_once()
         call_kwargs = mock_slack_app.client.chat_postMessage.call_args[1]
         assert call_kwargs["channel"] == "D123456"
@@ -625,3 +619,37 @@ class TestReactionFeedback:
         # Should add white_check_mark (complete emoji)
         final_add_call = mock_slack_app.client.reactions_add.call_args_list[-1]
         assert final_add_call[1]["name"] == "white_check_mark"
+
+    async def test_reaction_tracking_uses_context_id_for_channel_message(
+        self, slack_channel, mock_bus, mock_slack_app
+    ):
+        """Reaction tracking key must be context_id, not channel_id.
+
+        For channel (non-DM) messages the context_id is ``channel_id:thread_ts``.
+        If the key were stored as plain channel_id, send_ai_message would look up
+        the wrong key and the 👀 reaction would never be removed.
+        """
+        slack_channel._bus = mock_bus
+        slack_channel._app = mock_slack_app
+        slack_channel._config.reaction_feedback_enabled = True
+
+        channel_id = "C123456"
+        thread_ts = "1111111111.000100"
+        event = {
+            "user": "U123456",
+            "channel": channel_id,
+            "text": "<@B123456> hello",
+            "ts": thread_ts,
+            "thread_ts": thread_ts,
+            # no channel_type → not a DM
+        }
+
+        await slack_channel._on_message(event)
+
+        expected_context_id = f"{channel_id}:{thread_ts}"
+        assert expected_context_id in slack_channel._reaction_tracking, (
+            "Reaction must be tracked under context_id, not channel_id"
+        )
+        assert channel_id not in slack_channel._reaction_tracking, (
+            "Reaction must NOT be tracked under bare channel_id for channel messages"
+        )

@@ -20,11 +20,11 @@ Features:
 from __future__ import annotations
 
 import asyncio
-import logging
 import re
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from langclaw.bus.base import BaseMessageBus, InboundMessage, OutboundMessage
@@ -39,8 +39,6 @@ from langclaw.gateway.utils import (
     make_attachment,
     split_message,
 )
-
-logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_LEN = 3000  # Slack has a 3000 char limit for text blocks
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20 MB
@@ -107,7 +105,7 @@ class SlackChannel(BaseChannel):
         try:
             auth_response = await app.client.auth_test()
             self._bot_user_id = auth_response.get("user_id")
-            logger.info(f"Slack bot connected as {self._bot_user_id}")  
+            logger.info(f"Slack bot connected as {self._bot_user_id}")
         except Exception as exc:
             logger.warning(f"Failed to fetch bot user ID: {exc}")
 
@@ -133,10 +131,8 @@ class SlackChannel(BaseChannel):
             for entry in self._command_router.list_commands():
                 self._register_slash_command(app, entry.name, entry.description or entry.name)
 
-        logger.info(
-            f"SlackChannel starting… "
-            f"(reaction_feedback={'enabled' if self._config.reaction_feedback_enabled else 'disabled'})"
-        )
+        feedback_state = "enabled" if self._config.reaction_feedback_enabled else "disabled"
+        logger.info(f"SlackChannel starting… (reaction_feedback={feedback_state})")
 
         # Start socket mode handler
         handler = AsyncSocketModeHandler(app, self._config.app_token)
@@ -281,7 +277,7 @@ class SlackChannel(BaseChannel):
 
             # Log actionable errors
             if slack_error == "missing_scope":
-                logger.warning(f"Reaction failed: missing 'reactions:write' scope")
+                logger.warning("Reaction failed: missing 'reactions:write' scope")
             else:
                 logger.debug(f"Failed to add reaction '{emoji}': {slack_error or exc}")
 
@@ -312,7 +308,7 @@ class SlackChannel(BaseChannel):
 
             # Log actionable errors
             if slack_error == "missing_scope":
-                logger.warning(f"Reaction failed: missing 'reactions:write' scope")
+                logger.warning("Reaction failed: missing 'reactions:write' scope")
             else:
                 logger.debug(f"Failed to remove reaction '{emoji}': {slack_error or exc}")
 
@@ -361,11 +357,6 @@ class SlackChannel(BaseChannel):
             logger.debug("Slack message dropped: incomplete event data")
             return
 
-        # Add 👀 reaction immediately to signal "processing"
-        if self._config.reaction_feedback_enabled and message_ts:
-            self._reaction_tracking[channel_id] = (channel_id, message_ts)
-            await self._add_reaction(channel_id, message_ts, self._config.reaction_processing)
-
         # Get user info for username (with in-memory cache to avoid rate limits)
         username = self._user_cache.get(user_id, "")
         if not username:
@@ -393,6 +384,19 @@ class SlackChannel(BaseChannel):
                 logger.debug(f"Failed to send 'not authorized' reply: {exc}")
             return
 
+        # Thread-scoped context for channels, channel-scoped for DMs
+        if is_dm:
+            context_id = channel_id
+        elif thread_ts:
+            context_id = f"{channel_id}:{thread_ts}"
+        else:
+            context_id = f"{channel_id}:{message_ts}"
+
+        # Add 👀 reaction immediately to signal "processing"
+        if self._config.reaction_feedback_enabled and message_ts:
+            self._reaction_tracking[context_id] = (channel_id, message_ts)
+            await self._add_reaction(channel_id, message_ts, self._config.reaction_processing)
+
         # -- Command handling (/start, /help, /reset, /cron) --
         stripped = text.strip()
         if stripped.startswith("/"):
@@ -404,7 +408,7 @@ class SlackChannel(BaseChannel):
                 ctx = CommandContext(
                     channel=self.name,
                     user_id=user_id,
-                    context_id=channel_id,
+                    context_id=context_id,
                     chat_id=channel_id,
                     args=args,
                     display_name=username or user_id,
@@ -417,7 +421,7 @@ class SlackChannel(BaseChannel):
 
                 # Update reaction: 👀 → ✅ for command responses
                 if self._config.reaction_feedback_enabled:
-                    await self._swap_reaction(channel_id)
+                    await self._swap_reaction(context_id)
                 return
 
         if self._bus is None:
@@ -471,14 +475,6 @@ class SlackChannel(BaseChannel):
                 logger.warning(f"Failed to download Slack attachment: {exc}")
                 file_name = file_info.get("name", "file")
                 content_parts.append(f"[attachment: {file_name} - download failed]")
-
-        # Thread-scoped context for channels, channel-scoped for DMs
-        if is_dm:
-            context_id = channel_id
-        elif thread_ts:
-            context_id = f"{channel_id}:{thread_ts}"
-        else:
-            context_id = f"{channel_id}:{message_ts}"
 
         await self._bus.publish(
             InboundMessage(
