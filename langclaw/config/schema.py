@@ -154,6 +154,24 @@ class HttpChannelConfig(BaseModel):
     user_roles: StringDict = Field(default_factory=dict)
     """Maps HTTP user IDs to permission roles.
     Env format: ``user1:admin,user2:viewer``"""
+class SlackChannelConfig(BaseModel):
+    enabled: bool = False
+    bot_token: str = ""
+    """Slack Bot User OAuth Token (starts with xoxb-).
+    Get from https://api.slack.com/apps -> OAuth & Permissions"""
+    app_token: str = ""
+    """Slack App-Level Token for Socket Mode (starts with xapp-).
+    Get from https://api.slack.com/apps -> Basic Information -> App-Level Tokens"""
+    allow_from: StringList = Field(default_factory=list)
+    user_roles: StringDict = Field(default_factory=dict)
+    """Maps Slack user IDs to permission roles.
+    Env format: ``U123456:admin,U789012:viewer``"""
+    reaction_feedback_enabled: bool = True
+    """Enable reaction emoji feedback (👀 while processing, ✅ when done)."""
+    reaction_processing: str = "eyes"
+    """Emoji name for 'processing' reaction. Default: 'eyes' (👀)."""
+    reaction_complete: str = "white_check_mark"
+    """Emoji name for 'complete' reaction. Default: 'white_check_mark' (✅)."""
 
 
 class ChannelsConfig(BaseModel):
@@ -161,6 +179,7 @@ class ChannelsConfig(BaseModel):
     discord: DiscordChannelConfig = Field(default_factory=DiscordChannelConfig)
     websocket: WebSocketChannelConfig = Field(default_factory=WebSocketChannelConfig)
     http: HttpChannelConfig = Field(default_factory=HttpChannelConfig)
+    slack: SlackChannelConfig = Field(default_factory=SlackChannelConfig)
 
 
 class AgentConfig(BaseModel):
@@ -376,6 +395,17 @@ class ToolsConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into base; override wins on conflicts."""
+    result = dict(base)
+    for key, val in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(val, dict):
+            result[key] = _deep_merge(result[key], val)
+        else:
+            result[key] = val
+    return result
+
+
 def _load_json_defaults() -> dict[str, Any]:
     """Load ~/.langclaw/config.json if it exists."""
     if _CONFIG_PATH.exists():
@@ -439,7 +469,7 @@ class LangclawConfig(BaseSettings):
         """Merge JSON file as low-priority base; env vars win."""
         if isinstance(values, dict):
             json_data = _load_json_defaults()
-            merged = {**json_data, **values}
+            merged = _deep_merge(json_data, values)
             return merged
         return values
 

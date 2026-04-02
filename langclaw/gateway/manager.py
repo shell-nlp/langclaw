@@ -502,6 +502,7 @@ class GatewayManager:
                                 content=tool_name,
                                 type="tool_progress",
                                 metadata={
+                                    **(metadata or {}),
                                     "tool_call_id": tool_call_id,
                                     "tool": tool_name,
                                     "args": tc.get("args", {}),
@@ -526,6 +527,7 @@ class GatewayManager:
                             content=content,
                             type="tool_result",
                             metadata={
+                                **(metadata or {}),
                                 "tool_call_id": tc_id,
                                 "tool": _tool_call_names.get(tc_id, m.name or ""),
                                 **metadata,
