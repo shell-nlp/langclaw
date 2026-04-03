@@ -1,24 +1,26 @@
 """
-HttpChannel — Gateway channel exposing a FastAPI HTTP server.
+HttpChannel — Gateway channel exposing a FastAPI HTTP server with SSE streaming.
 
 Requires: langclaw[http]  →  uv add "langclaw[http]"
 
-Protocol (JSON over HTTP):
-  Inbound  (client → gateway)  POST /message:
+Protocol (SSE over HTTP):
+  POST /stream:
     {"user_id": "...", "context_id": "...", "content": "...", "attachments": [...]}
 
-  Outbound (gateway → client):
-    {"type": "ai"|"tool_progress"|"tool_result", "content": "...", ...}
+  Outbound SSE:
+    event: tool_progress\ndata: {"content": "...", "metadata": {...}}\n\n
+    event: tool_result\ndata: {"content": "...", "metadata": {...}}\n\n
+    event: ai\ndata: {"content": "..."}\n\n
 
-Each request is identified by ``(user_id, context_id)`` pair.
-Outbound messages are matched to pending HTTP responses via correlation_id.
+Each SSE stream is identified by ``(user_id, context_id)`` pair.
+The POST /stream publishes to the bus and returns an SSE stream for responses.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from langclaw.bus.base import (
@@ -39,34 +41,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _make_json_response(status_code: int, content: dict[str, Any]) -> Response:
-    from fastapi.responses import JSONResponse
+class _PendingStream:
+    """Holds an async iterator for one SSE stream session."""
 
-    return JSONResponse(status_code=status_code, content=content)
+    __slots__ = ("queue", "user_id", "context_id")
 
-
-def _make_json_response_ok(content: dict[str, Any]) -> Response:
-    from fastapi.responses import JSONResponse
-
-    return JSONResponse(content=content)
-
-
-class _PendingResponse:
-    """Holds a response future for one HTTP request, awaited by the POST handler."""
-
-    __slots__ = ("event", "response")
-
-    def __init__(self) -> None:
-        self.event: asyncio.Event = asyncio.Event()
-        self.response: dict[str, Any] = {}
+    def __init__(self, user_id: str, context_id: str) -> None:
+        self.queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self.user_id = user_id
+        self.context_id = context_id
 
 
 class HttpChannel(BaseChannel):
     """
-    HTTP server channel backed by FastAPI + uvicorn.
+    HTTP server channel backed by FastAPI + uvicorn with SSE streaming.
 
-    Listens on ``http://<host>:<port>`` and accepts JSON-framed messages.
-    Matches outbound messages to pending requests via correlation_id.
+    Single endpoint:
+      - ``POST /stream`` — receives JSON with message data, returns SSE stream
 
     Args:
         config: HTTP-specific section of LangclawConfig.channels.http.
@@ -79,11 +70,14 @@ class HttpChannel(BaseChannel):
         self._bus: BaseMessageBus | None = None
         self._server_task: asyncio.Task | None = None
         self._shutdown_event = asyncio.Event()
-        self._pending: dict[str, _PendingResponse] = {}
-        self._pending_lock = asyncio.Lock()
+        self._streams: dict[str, _PendingStream] = {}
+        self._streams_lock = asyncio.Lock()
 
     def is_enabled(self) -> bool:
         return self._config.enabled
+
+    def _stream_key(self, user_id: str, context_id: str) -> str:
+        return f"{user_id}:{context_id}"
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -135,9 +129,9 @@ class HttpChannel(BaseChannel):
 
         app = FastAPI(title="langclaw-http")
 
-        @app.post("/message")
-        async def handle_message(data: dict[str, Any]) -> Response:
-            return await self._handle_message(data)
+        @app.post("/stream")
+        async def stream_events(data: dict[str, Any]) -> Response:
+            return await self._handle_stream(data)
 
         @app.get("/health")
         async def health() -> dict[str, str]:
@@ -154,31 +148,41 @@ class HttpChannel(BaseChannel):
             except asyncio.CancelledError:
                 pass
             self._server_task = None
-        async with self._pending_lock:
-            self._pending.clear()
+        async with self._streams_lock:
+            self._streams.clear()
         logger.info("HttpChannel stopped.")
 
     # ------------------------------------------------------------------
-    # Message handler
+    # Stream handler
     # ------------------------------------------------------------------
 
-    async def _handle_message(self, data: dict[str, Any]) -> Response:
-        """Process an inbound HTTP POST /message request."""
+    async def _handle_stream(self, data: dict[str, Any]) -> Response:
+        """Handle POST /stream request and return SSE response."""
         user_id = data.get("user_id", "http-anon")
         context_id = data.get("context_id", "default")
         content = data.get("content", "")
 
         if not self._is_allowed(user_id):
-            return _make_json_response(
-                403,
-                {"type": "error", "content": "Not authorised."},
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=403,
+                content={"type": "error", "content": "Not authorised."},
             )
 
         if not content and not data.get("attachments"):
-            return _make_json_response(
-                400,
-                {"type": "error", "content": "Empty message."},
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=400,
+                content={"type": "error", "content": "Empty message."},
             )
+
+        stream_key = self._stream_key(user_id, context_id)
+        pending = _PendingStream(user_id, context_id)
+
+        async with self._streams_lock:
+            self._streams[stream_key] = pending
 
         stripped = content.strip()
         if stripped.startswith("/") and self._command_router is not None:
@@ -189,146 +193,119 @@ class HttpChannel(BaseChannel):
                 channel=self.name,
                 user_id=user_id,
                 context_id=context_id,
-                chat_id=f"{user_id}:{context_id}",
+                chat_id=stream_key,
                 args=args,
                 display_name=user_id,
             )
             response = await self._command_router.dispatch(cmd, ctx)
-            return _make_json_response_ok({"type": "command", "content": response})
+            await pending.queue.put({"type": "command", "content": response})
 
-        if self._bus is None:
-            return _make_json_response(
-                503,
-                {"type": "error", "content": "Bus not available."},
-            )
+        elif self._bus is not None:
+            raw_attachments = data.get("attachments") or []
+            attachments = [
+                Attachment(
+                    type=AttachmentType(a.get("type", "file")),
+                    mime_type=a.get("mime_type", ""),
+                    filename=a.get("filename", ""),
+                    url=a.get("url", ""),
+                    data=a.get("data", ""),
+                    size=a.get("size", 0),
+                )
+                for a in raw_attachments
+                if isinstance(a, dict)
+            ]
 
-        raw_attachments = data.get("attachments") or []
-        attachments = [
-            Attachment(
-                type=AttachmentType(a.get("type", "file")),
-                mime_type=a.get("mime_type", ""),
-                filename=a.get("filename", ""),
-                url=a.get("url", ""),
-                data=a.get("data", ""),
-                size=a.get("size", 0),
-            )
-            for a in raw_attachments
-            if isinstance(a, dict)
-        ]
+            client_metadata = data.get("metadata") or {}
 
-        client_metadata = data.get("metadata") or {}
-        msg_id = str(uuid.uuid4())
-
-        pending = _PendingResponse()
-        async with self._pending_lock:
-            self._pending[msg_id] = pending
-
-        inbound_metadata = {
-            "platform": "http",
-            "correlation_id": msg_id,
-            **client_metadata,
-        }
-
-        try:
             await self._bus.publish(
                 InboundMessage(
                     channel=self.name,
                     user_id=user_id,
                     context_id=context_id,
-                    chat_id=f"{user_id}:{context_id}",
+                    chat_id=stream_key,
                     content=content,
                     origin="channel",
                     attachments=attachments,
-                    metadata=inbound_metadata,
+                    metadata={
+                        "platform": "http",
+                        "stream_key": stream_key,
+                        **client_metadata,
+                    },
                 )
             )
 
-            await asyncio.wait_for(pending.event.wait(), timeout=300)
-            response_data = pending.response
-
-        except TimeoutError:
-            async with self._pending_lock:
-                self._pending.pop(msg_id, None)
-            return _make_json_response(
-                504,
-                {"type": "error", "content": "Request timed out."},
-            )
-        except Exception as exc:
-            async with self._pending_lock:
-                self._pending.pop(msg_id, None)
-            logger.exception("Error processing HTTP message: %s", exc)
-            return _make_json_response(
-                500,
-                {"type": "error", "content": "Internal error."},
-            )
+        try:
+            return await self._stream_response(pending, stream_key)
         finally:
-            async with self._pending_lock:
-                self._pending.pop(msg_id, None)
+            pass
 
-        response_type = response_data.get("type", "ai")
-        response_content = response_data.get("content", "")
+    async def _stream_response(self, pending: _PendingStream, stream_key: str) -> Response:
+        """Create an async SSE streaming response."""
+        from starlette.responses import StreamingResponse
 
-        return _make_json_response_ok({"type": response_type, "content": response_content})
+        async def event_generator() -> AsyncIterator[str]:
+            try:
+                while True:
+                    try:
+                        event = await asyncio.wait_for(pending.queue.get(), timeout=6)
+                    except TimeoutError:
+                        break
+
+                    # event_type = event.get("type", "ai")
+                    event_data = event.get("content", "")
+                    event_metadata = event.get("metadata", {})
+
+                    if event_metadata:
+                        payload = f'{{"content": {event_data!r}, "metadata": {event_metadata}}}'
+                    else:
+                        payload = f'{{"content": {event_data!r}}}'
+
+                    yield f"data: {payload}\n\n"
+            except asyncio.CancelledError:
+                pass
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     # ------------------------------------------------------------------
     # Outbound hooks
     # ------------------------------------------------------------------
 
     async def send_tool_progress(self, msg: OutboundMessage) -> None:
-        correlation_id = msg.metadata.get("correlation_id") if msg.metadata else None
-        if not correlation_id:
-            return
-        async with self._pending_lock:
-            pending = self._pending.get(correlation_id)
-        if pending is None:
-            return
-        if not msg.content:
-            return
-        pending.response = {
-            "type": "tool_progress",
-            "content": msg.content,
-        }
-        pending.event.set()
-        pending.event.clear()
-        await asyncio.sleep(0)
-        async with self._pending_lock:
-            pending.response = {}
-            pending.event.clear()
+        await self._push_to_stream(msg)
 
     async def send_tool_result(self, msg: OutboundMessage) -> None:
-        correlation_id = msg.metadata.get("correlation_id") if msg.metadata else None
-        if not correlation_id:
-            return
-        async with self._pending_lock:
-            pending = self._pending.get(correlation_id)
-        if pending is None:
-            return
-        pending.response = {
-            "type": "tool_result",
-            "content": msg.content,
-        }
-        pending.event.set()
-        pending.event.clear()
-        await asyncio.sleep(0)
-        async with self._pending_lock:
-            pending.response = {}
-            pending.event.clear()
+        await self._push_to_stream(msg)
 
     async def send_ai_message(self, msg: OutboundMessage) -> None:
         if not msg.content:
             return
-        correlation_id = msg.metadata.get("correlation_id") if msg.metadata else None
-        if not correlation_id:
-            return
-        async with self._pending_lock:
-            pending = self._pending.get(correlation_id)
+        await self._push_to_stream(msg)
+
+    async def _push_to_stream(self, msg: OutboundMessage) -> None:
+        """Push an outbound message to the appropriate SSE stream."""
+        stream_key = msg.metadata.get("stream_key") if msg.metadata else None
+        if not stream_key:
+            stream_key = self._stream_key(msg.user_id, msg.context_id)
+        async with self._streams_lock:
+            pending = self._streams.get(stream_key)
         if pending is None:
             return
-        pending.response = {
-            "type": "ai",
+
+        event = {
+            "type": msg.type,
             "content": msg.content,
+            "metadata": msg.metadata,
         }
-        pending.event.set()
+
+        await pending.queue.put(event)
 
     # ------------------------------------------------------------------
     # Helpers

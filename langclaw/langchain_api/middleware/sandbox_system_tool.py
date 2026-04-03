@@ -63,6 +63,12 @@ All file paths must start with a /. Follow the tool docs for the available tools
 ## Large Tool Results
 
 When a tool result is too large, it may be offloaded into the filesystem instead of being returned inline. In those cases, use `read_file` to inspect the saved result in chunks, or use `grep` within `/large_tool_results/` if you need to search across offloaded tool results and do not know the exact file path. Offloaded tool results are stored under `/large_tool_results/<tool_call_id>`."""
+FILESYSTEM_SYSTEM_PROMPT += """
+### 注意事项
+- 你仅有访问工作空间下的文件权限，禁止操作其它目录，如果操作其它目录必然会导致系统崩溃，工作空间路径为：/.langclaw/workspace
+- 提示词中的路径的前缀实则都必须加上工作空间路径才是真正的路径，例如：/.langclaw/workspace/memories /.langclaw/workspace/large_tool_results 等等
+"""
+
 EXECUTION_SYSTEM_PROMPT = """## Execute Tool `execute`
 
 You have access to an `execute` tool for running shell commands in a sandboxed environment.
