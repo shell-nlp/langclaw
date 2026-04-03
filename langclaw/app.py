@@ -755,6 +755,7 @@ class Langclaw:
             except ImportError:
                 logger.warning(
                     "HTTP enabled but fastapi/uvicorn not installed. Run: uv add 'langclaw[http]'"
+                )
         if ch_cfg.slack.enabled:
             try:
                 from langclaw.gateway.slack import SlackChannel

@@ -317,7 +317,6 @@ class HttpChannel(BaseChannel):
     async def send_ai_message(self, msg: OutboundMessage) -> None:
         if not msg.content:
             return
-        logger.warning("Sending AI message to unknown correlation_id: %s", msg)
         correlation_id = msg.metadata.get("correlation_id") if msg.metadata else None
         if not correlation_id:
             return
