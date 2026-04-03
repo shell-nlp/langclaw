@@ -14,7 +14,7 @@ from langchain_core.tools import BaseTool, tool
 from loguru import logger
 
 from langclaw.context import LangclawContext
-from langclaw.cron.utils import make_cron_context_id
+from langclaw.cron.utils import format_cron_job_detail, make_cron_context_id
 
 if TYPE_CHECKING:
     from langclaw.cron.scheduler import CronManager
@@ -221,16 +221,7 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
             if job is None:
                 return f"Job {job_id} not found."
 
-            agent_label = job.agent_name or "(default agent)"
-            return (
-                f"Job ID: {job.id}\n"
-                f"Schedule: {job.schedule}\n"
-                f"Name: {job.name!r}\n"
-                f"Context ID: {job.context_id}\n"
-                f"Agent: {agent_label}\n"
-                "Message:\n"
-                f"{job.message}"
-            )
+            return format_cron_job_detail(job)
 
         # ── remove ─────────────────────────────────────────────────────────
         if action == "remove":
