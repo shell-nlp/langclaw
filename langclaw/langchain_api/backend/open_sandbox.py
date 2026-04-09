@@ -139,6 +139,7 @@ class OpenSandbox(BaseSandbox):
 
 
 if __name__ == "__main__":
+    # docker pull gpu-server:180/opensandbox/code-interpreter:v1.0.1 && docker pull gpu-server:180/opensandbox/execd:v1.0.6 && docker pull gpu-server:180/opensandbox/egress:v1.0.1
     # opensandbox-server --config .sandbox.toml
     volumes = [
         Volume(

@@ -103,6 +103,8 @@ GLOB_TIMEOUT = 20.0  # seconds
 def get_user_workspace_path(user_id: str) -> str:
     new_workspace_path = Path(f"{workspace_path}/{user_id}/.langclaw")
     new_workspace_path.mkdir(parents=True, exist_ok=True)
+    conversation_history = new_workspace_path / "conversation_history"
+    conversation_history.mkdir(parents=True, exist_ok=True)
     return str(new_workspace_path)
 
 
@@ -118,13 +120,19 @@ def get_new_backend(
     user_id: str,
 ) -> OpenSandbox:
     workspace_path = get_user_workspace_path(user_id)
+    # /conversation_history
     return OpenSandbox(
         volumes=[
             Volume(
                 name=f"langclaw-{user_id}",
                 host=Host(path=workspace_path),
                 mount_path="/.langclaw",
-            )
+            ),
+            Volume(
+                name=f"langclaw-conversation-history-{user_id}",
+                host=Host(path=workspace_path + "/conversation_history"),
+                mount_path="/conversation_history",
+            ),
         ]
     )
 
@@ -452,6 +460,8 @@ class SandboxSystemToolMiddleware(AgentMiddleware):
         prompt_parts = [FILESYSTEM_SYSTEM_PROMPT, EXECUTION_SYSTEM_PROMPT]
         system_prompt = "\n\n".join(prompt_parts).strip()
         new_system_message = append_to_system_message(request.system_message, system_prompt)
+        # ----
+        logger.warning(f"tools：{[tool.name for tool in request.tools]}")
         request = request.override(system_message=new_system_message)
         return handler(request)
 

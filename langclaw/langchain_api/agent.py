@@ -33,6 +33,9 @@ from langgraph.cache.base import BaseCache
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
+from loguru import logger
+
+from langclaw.langchain_api.patch.langchain import patch_langchain
 
 BASE_AGENT_PROMPT = """You are a Deep Agent, an AI assistant that helps users accomplish tasks using tools. You respond with text and tool calls. The user can see your responses and tool outputs in real time.
 
@@ -104,6 +107,27 @@ def get_default_model() -> ChatAnthropic:
     return ChatAnthropic(
         model_name="claude-sonnet-4-6",
     )
+
+
+# 添加可观测性组件
+def add_observation_component():
+    """添加可观测性组件"""
+    import os
+
+    from phoenix.otel import register
+
+    collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT")
+    logger.warning(f"PHOENIX_COLLECTOR_ENDPOINT: {collector_endpoint}")
+
+    tracer_provider = register(
+        project_name="langclaw",
+        auto_instrument=True,
+    )
+    return tracer_provider
+
+
+patch_langchain()
+add_observation_component()
 
 
 def create_deep_agent(
