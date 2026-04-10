@@ -162,6 +162,7 @@ def create_deep_agent(
         create_summarization_middleware,
     )
 
+    tools = [t for t in tools if t.name not in ["move_file", "delete_file"]]
     skills = ["/.langclaw/workspace/skills/"]
 
     backend = backend if backend is not None else (StateBackend)
