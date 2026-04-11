@@ -1860,7 +1860,7 @@ wheels = [
 
 [[package]]
 name = "langclaw"
-version = "0.1.9.dev0"
+version = "0.1.8"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
